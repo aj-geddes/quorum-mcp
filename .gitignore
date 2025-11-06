@@ -149,3 +149,9 @@ secrets.yaml
 *.log
 sessions/
 .ruff_cache/
+
+# AI and planning documents (not for public repo)
+quorum-mcp-plan.md
+*-plan.md
+agile-structure.md
+*-artifact.md
