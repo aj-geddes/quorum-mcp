@@ -9,7 +9,7 @@
 
 ## 🎯 Overview
 
-Quorum-MCP orchestrates multiple AI providers (Claude, GPT-4, Gemini) through multi-round deliberation to produce consensus-based responses. By combining different AI models, you get more balanced, comprehensive, and reliable answers.
+Quorum-MCP orchestrates multiple AI providers (Claude, GPT, Gemini) through multi-round deliberation to produce consensus-based responses. By combining different AI models, you get more balanced, comprehensive, and reliable answers.
 
 **Why Quorum?**
 - 🎭 **Diverse Perspectives**: Each AI has unique strengths and biases
@@ -23,8 +23,8 @@ Quorum-MCP orchestrates multiple AI providers (Claude, GPT-4, Gemini) through mu
 - 🤖 **Anthropic Claude** - Thoughtful, nuanced reasoning
   - Models: `claude-3-5-sonnet-20241022` (default), `claude-3-opus`, `claude-3-haiku`
   - Context: 200K tokens | Cost: $3-$15/1M input
-- 🧠 **OpenAI GPT-4** - Broad knowledge, strong reasoning
-  - Models: `gpt-4o` (default), `gpt-4o-mini`, `gpt-4-turbo`
+- 🧠 **OpenAI GPT** - Broad knowledge, strong reasoning
+  - Models: `GPTo` (default), `GPTo-mini`, `GPT-turbo`
   - Context: 128K tokens | Cost: $0.15-$30/1M input
 - ✨ **Google Gemini** - Fast, cost-effective, huge context
   - Models: `gemini-2.5-flash` (default), `gemini-2.5-pro`, `gemini-1.5-pro`
@@ -292,7 +292,7 @@ quorum-mcp/
 │       ├── __init__.py
 │       ├── base.py            # Abstract provider interface
 │       ├── anthropic_provider.py  # Claude integration
-│       ├── openai_provider.py     # GPT-4 integration
+│       ├── openai_provider.py     # GPT integration
 │       └── gemini_provider.py     # Gemini integration
 ├── examples/
 │   ├── three_provider_demo.py  # Demo with all 3 providers
@@ -388,7 +388,7 @@ Total                             31%
 ### ✅ Phase 1: MVP (Complete)
 - [x] Provider abstraction layer
 - [x] Anthropic Claude integration
-- [x] OpenAI GPT-4 integration
+- [x] OpenAI GPT integration
 - [x] Basic orchestration engine
 - [x] Session management
 - [x] FastMCP server with q_in/q_out
@@ -488,7 +488,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 - Powered by [FastMCP](https://github.com/jlowin/fastmcp)
 - Utilizes:
   - [Anthropic Claude](https://www.anthropic.com/)
-  - [OpenAI GPT-4](https://openai.com/)
+  - [OpenAI GPT](https://openai.com/)
   - [Google Gemini](https://deepmind.google/technologies/gemini/)
 
 ## 📬 Contact
