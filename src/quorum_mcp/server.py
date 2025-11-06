@@ -16,7 +16,7 @@ from typing import Any
 from mcp.server.fastmcp import FastMCP
 
 from quorum_mcp.orchestrator import Orchestrator
-from quorum_mcp.providers import AnthropicProvider, GeminiProvider, OpenAIProvider
+from quorum_mcp.providers import AnthropicProvider, GeminiProvider, OllamaProvider, OpenAIProvider
 from quorum_mcp.session import SessionManager, get_session_manager
 
 # Initialize FastMCP server
@@ -205,10 +205,33 @@ async def initialize_server() -> None:
         except Exception as e:
             logger.warning(f"Failed to initialize Gemini provider: {e}")
 
+    # Try to initialize Ollama provider (local LLM, no API key required)
+    # Check OLLAMA_ENABLE env var or attempt to connect by default
+    if os.getenv("OLLAMA_ENABLE", "true").lower() in ("true", "1", "yes"):
+        try:
+            ollama = OllamaProvider()
+            # Check if Ollama server is running
+            availability = await ollama.check_availability()
+            if availability["server_running"]:
+                providers.append(ollama)
+                logger.info(
+                    f"Ollama provider initialized (model: {ollama.model}, "
+                    f"available: {availability['model_available']})"
+                )
+                if not availability["model_available"]:
+                    logger.warning(
+                        f"Model {ollama.model} not found. Pull with: ollama pull {ollama.model}"
+                    )
+            else:
+                logger.info("Ollama server not running. Skipping Ollama provider.")
+        except Exception as e:
+            logger.warning(f"Failed to initialize Ollama provider: {e}")
+
     if len(providers) == 0:
         logger.error(
-            "No providers initialized. Please set at least one API key: "
-            "ANTHROPIC_API_KEY, OPENAI_API_KEY, or GOOGLE_API_KEY"
+            "No providers initialized. Please set at least one API key "
+            "(ANTHROPIC_API_KEY, OPENAI_API_KEY, GOOGLE_API_KEY) "
+            "or start Ollama server (ollama serve)"
         )
         return
 
@@ -225,15 +248,19 @@ def main() -> None:
     making it compatible with Claude Desktop and other MCP clients.
 
     The server will:
-    1. Initialize AI provider connections (Anthropic, OpenAI, Gemini)
+    1. Initialize AI provider connections (Anthropic, OpenAI, Gemini, Ollama)
     2. Initialize session management
     3. Start the MCP server on stdio transport
     4. Handle incoming tool requests (q_in, q_out)
 
-    Environment Variables Required (at least one):
+    Environment Variables (at least one provider required):
     - ANTHROPIC_API_KEY: API key for Claude
-    - OPENAI_API_KEY: API key for GPT-4
+    - OPENAI_API_KEY: API key for OpenAI
     - GOOGLE_API_KEY: API key for Gemini
+    - OLLAMA_ENABLE: Enable Ollama local LLM (default: true)
+    - OLLAMA_HOST: Ollama server host (default: http://localhost:11434)
+
+    Note: Ollama requires local server running (ollama serve)
     """
     logger.info("Starting Quorum-MCP server...")
 

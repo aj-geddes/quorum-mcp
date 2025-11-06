@@ -2,14 +2,14 @@
 
 > Multi-AI Consensus System MCP Server - Get better answers through deliberation
 
-[![Tests](https://img.shields.io/badge/tests-76%20passing-success)](https://github.com/aj-geddes/quorum-mcp)
+[![Tests](https://img.shields.io/badge/tests-105%20passing-success)](https://github.com/aj-geddes/quorum-mcp)
 [![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen)](https://github.com/aj-geddes/quorum-mcp)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 ## 🎯 Overview
 
-Quorum-MCP orchestrates multiple AI providers (Anthropic Claude, OpenAI, Google Gemini) through multi-round deliberation to produce consensus-based responses. By combining different AI models, you get more balanced, comprehensive, and reliable answers.
+Quorum-MCP orchestrates multiple AI providers (Anthropic Claude, OpenAI, Google Gemini, Ollama) through multi-round deliberation to produce consensus-based responses. By combining different AI models, you get more balanced, comprehensive, and reliable answers.
 
 **Why Quorum?**
 - 🎭 **Diverse Perspectives**: Each AI has unique strengths and biases
@@ -29,6 +29,10 @@ Quorum-MCP orchestrates multiple AI providers (Anthropic Claude, OpenAI, Google 
 - ✨ **Google Gemini** - Fast, cost-effective, huge context
   - Models: `gemini-2.5-flash` (default), `gemini-2.5-pro`, `gemini-1.5-pro`
   - Context: Up to **2M tokens** | Cost: $0.15-$1.25/1M input
+- 🏠 **Ollama (Local LLMs)** - Private, zero-cost local inference
+  - Models: `llama3.2` (default), `llama3.1`, `mistral`, `mixtral`, `qwen3`, `deepseek-r1`, `gemma3`
+  - Context: Up to 128K tokens | Cost: **$0.00** (100% local)
+  - Privacy: 100% - Data never leaves your machine
 
 ### Three Operational Modes
 
@@ -64,10 +68,11 @@ session = await orchestrator.execute_quorum(
 
 ### Additional Features
 - ⚡ **Async/Await**: Non-blocking I/O throughout
-- 💰 **Cost Tracking**: Per-provider and total cost reporting
+- 💰 **Cost Tracking**: Per-provider and total cost reporting (including $0 for local)
+- 🏠 **Local LLMs**: Zero-cost inference with Ollama (100% private)
 - 📊 **Session Management**: Persistent session storage and retrieval
 - 🔒 **Type Safe**: Full Pydantic validation
-- 🧪 **Well Tested**: 76 passing tests, 95% provider coverage
+- 🧪 **Well Tested**: 105 passing tests, 95% provider coverage
 - 📝 **MCP Integration**: Works with Claude Desktop and other MCP clients
 
 ## 🚀 Quick Start
@@ -88,6 +93,8 @@ pip install -e ".[dev]"
 
 ### Configuration
 
+#### Cloud Providers (Optional)
+
 Set your API keys as environment variables:
 
 ```bash
@@ -96,7 +103,26 @@ export OPENAI_API_KEY="sk-..."
 export GOOGLE_API_KEY="..."
 ```
 
-**Note**: At least one API key is required. For best results, configure all three.
+#### Local LLMs with Ollama (Optional, Zero Cost)
+
+Install and run Ollama for 100% free, private local inference:
+
+```bash
+# Install Ollama (Mac/Linux/Windows)
+# Visit: https://ollama.com/download
+
+# Start Ollama server
+ollama serve
+
+# Pull a model (in another terminal)
+ollama pull llama3.2
+
+# Optional: Configure Ollama host (default: http://localhost:11434)
+export OLLAMA_HOST="http://localhost:11434"
+export OLLAMA_ENABLE="true"  # Set to "false" to disable
+```
+
+**Note**: At least one provider (cloud or local) is required. Ollama enables zero-cost consensus!
 
 ### Running the Server
 
@@ -213,8 +239,11 @@ Add to your `claude_desktop_config.json`:
 ### Running Demos
 
 ```bash
-# Three-provider consensus demo
+# Three-provider consensus demo (cloud providers)
 python examples/three_provider_demo.py
+
+# Local LLM demo with Ollama (zero cost!)
+python examples/local_llm_demo.py
 
 # End-to-end demo with all modes
 python examples/end_to_end_demo.py
@@ -227,11 +256,13 @@ python examples/session_demo.py
 
 | Provider | Model | Input ($/1M) | Output ($/1M) | Context Window | Speed |
 |----------|-------|--------------|---------------|----------------|-------|
+| **Ollama** 🏆 | **llama3.2** | **$0.00** | **$0.00** | **128K** | ⚡⚡⚡ |
+| **Ollama** | **mistral** | **$0.00** | **$0.00** | **32K** | ⚡⚡⚡ |
 | Gemini   | 2.5 Flash | $0.15 | $0.60 | 200K | ⚡⚡⚡ |
 | OpenAI   | 4o-mini | $0.15 | $0.60 | 128K | ⚡⚡⚡ |
 | Claude   | 3.5 Sonnet | $3.00 | $15.00 | 200K | ⚡⚡ |
 | Gemini   | 2.5 Pro | $1.25 | $10.00 | 200K | ⚡⚡ |
-| **Gemini**   | **1.5 Pro** | **$1.25** | **$5.00** | **2M** 🏆 | ⚡ |
+| Gemini   | 1.5 Pro | $1.25 | $5.00 | 2M | ⚡ |
 | OpenAI   | 4o | $2.50 | $10.00 | 128K | ⚡⚡ |
 | Claude   | 3 Opus | $15.00 | $75.00 | 200K | ⚡ |
 
@@ -258,11 +289,13 @@ graph TD
         Anthropic[AnthropicProvider<br/>• Async client<br/>• Token counting<br/>• Cost tracking<br/>• Error mapping]
         OpenAI[OpenAIProvider<br/>• Async client<br/>• tiktoken<br/>• Cost tracking<br/>• Error mapping]
         Gemini[GeminiProvider<br/>• Async client<br/>• Token counting<br/>• Cost tracking<br/>• Error mapping]
+        Ollama[OllamaProvider<br/>• Async client<br/>• Local inference<br/>• Zero cost<br/>• 100% private]
     end
 
     AnthropicAPI[Anthropic API]
     OpenAIAPI[OpenAI API]
     GeminiAPI[Google AI API]
+    OllamaServer[Ollama Server<br/>Local]
 
     Client -->|stdio/HTTP| FastMCP
     QIn --> Consensus
@@ -270,9 +303,11 @@ graph TD
     Consensus --> Anthropic
     Consensus --> OpenAI
     Consensus --> Gemini
+    Consensus --> Ollama
     Anthropic --> AnthropicAPI
     OpenAI --> OpenAIAPI
     Gemini --> GeminiAPI
+    Ollama --> OllamaServer
 ```
 
 ## 📁 Project Structure
@@ -289,9 +324,11 @@ quorum-mcp/
 │       ├── base.py            # Abstract provider interface
 │       ├── anthropic_provider.py  # Claude integration
 │       ├── openai_provider.py     # OpenAI integration
-│       └── gemini_provider.py     # Gemini integration
+│       ├── gemini_provider.py     # Gemini integration
+│       └── ollama_provider.py     # Ollama local LLM integration
 ├── examples/
-│   ├── three_provider_demo.py  # Demo with all 3 providers
+│   ├── three_provider_demo.py  # Demo with cloud providers
+│   ├── local_llm_demo.py       # Demo with Ollama (zero cost)
 │   ├── end_to_end_demo.py      # All operational modes
 │   └── session_demo.py         # Session management
 ├── tests/
@@ -300,6 +337,7 @@ quorum-mcp/
 │   ├── test_anthropic_provider.py
 │   ├── test_openai_provider.py
 │   ├── test_gemini_provider.py
+│   ├── test_ollama_provider.py
 │   └── test_integration.py
 ├── docs/
 │   └── session_management.md
@@ -364,6 +402,7 @@ See `gemini_provider.py` as a reference implementation.
 ```
 Module                          Coverage
 ────────────────────────────────────────
+providers/ollama_provider.py      95%
 providers/gemini_provider.py      95%
 providers/openai_provider.py      78%
 session.py                        90%
@@ -371,11 +410,11 @@ providers/base.py                 67%
 providers/anthropic_provider.py   56%
 orchestrator.py                   45%
 ────────────────────────────────────────
-Total                             31%
+Total                             32%
 ```
 
 **Test Results:**
-- ✅ 76 tests passing
+- ✅ 105 tests passing (76 + 29 new Ollama tests)
 - ❌ 58 tests failing (testing unimplemented features)
 - ⚠️ 16 errors (mock-related, non-critical)
 
@@ -404,14 +443,19 @@ Total                             31%
 - [x] Three-provider demo
 - [x] Documentation updates
 
-### 🚧 Phase 4: Local LLMs (Next)
-- [ ] Ollama provider integration
-- [ ] Support for Llama, Mistral, Mixtral
-- [ ] Zero-cost local inference
-- [ ] Privacy-preserving mode
+### ✅ Phase 4: Local LLMs (Complete)
+- [x] Ollama provider integration
+- [x] Support for Llama 3.2, Llama 3.1, Mistral, Mixtral, Qwen3, DeepSeek-R1, Gemma3
+- [x] Zero-cost local inference ($0.00)
+- [x] 100% privacy-preserving mode (data never leaves machine)
+- [x] 95% test coverage (29 passing tests)
+- [x] Local LLM demo and hybrid (local+cloud) demo
+- [x] Automatic server detection and model availability checking
 
 ### 🔮 Phase 5: Advanced Features (Future)
-- [ ] Mistral AI provider
+- [ ] Additional local LLM providers (LM Studio, vLLM, text-generation-webui)
+- [ ] OpenAI-compatible API provider (universal local LLM support)
+- [ ] Mistral AI provider (cloud)
 - [ ] Provider health monitoring
 - [ ] Dynamic provider selection
 - [ ] Caching layer
