@@ -629,7 +629,7 @@ class Provider(ABC):
         start_time = time.time()
         details: dict[str, Any] = {
             "provider": self.get_provider_name(),
-            "model": self.model,
+            "model": getattr(self, "model", None),
         }
 
         try:

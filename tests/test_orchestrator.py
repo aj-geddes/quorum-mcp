@@ -436,7 +436,9 @@ class TestOrchestratorErrorHandling:
         bad2 = FailingProvider("bad2")
 
         orchestrator = Orchestrator(
-            providers=[bad1, bad2], session_manager=session_manager
+            providers=[bad1, bad2],
+            session_manager=session_manager,
+            check_health=False,  # Disable health checks for this test
         )
 
         session = await orchestrator.execute_quorum(

@@ -27,7 +27,14 @@ import time
 from datetime import datetime
 from typing import Any
 
-from quorum_mcp.providers.base import Provider, ProviderError, ProviderRequest, ProviderResponse
+from quorum_mcp.providers.base import (
+    HealthCheckResult,
+    HealthStatus,
+    Provider,
+    ProviderError,
+    ProviderRequest,
+    ProviderResponse,
+)
 from quorum_mcp.session import Session, SessionManager, SessionStatus
 
 # Configure logging
@@ -60,6 +67,7 @@ class Orchestrator:
         min_providers: Minimum providers required (default: 2)
         provider_timeout: Timeout per provider in seconds (default: 60.0)
         max_retries: Maximum retry attempts per provider (default: 1)
+        check_health: Whether to check provider health before execution (default: True)
     """
 
     def __init__(
@@ -69,6 +77,7 @@ class Orchestrator:
         min_providers: int = 1,
         provider_timeout: float = 60.0,
         max_retries: int = 1,
+        check_health: bool = True,
     ):
         """
         Initialize the orchestrator.
@@ -79,6 +88,7 @@ class Orchestrator:
             min_providers: Minimum providers required for consensus (default: 1)
             provider_timeout: Timeout per provider request in seconds (default: 60.0)
             max_retries: Maximum retry attempts per provider (default: 1)
+            check_health: Whether to check provider health before execution (default: True)
 
         Raises:
             ValueError: If no providers provided
@@ -96,10 +106,11 @@ class Orchestrator:
         self.min_providers = min_providers
         self.provider_timeout = provider_timeout
         self.max_retries = max_retries
+        self.check_health = check_health
 
         logger.info(
             f"Orchestrator initialized with {len(providers)} providers "
-            f"(min: {min_providers}, timeout: {provider_timeout}s)"
+            f"(min: {min_providers}, timeout: {provider_timeout}s, health_checks: {check_health})"
         )
 
     async def execute_quorum(
@@ -165,8 +176,44 @@ class Orchestrator:
             session.session_id, {"status": SessionStatus.IN_PROGRESS}
         )
 
+        # Filter providers by health if enabled
+        providers_to_use = self.providers
+        health_results = None
+
+        if self.check_health:
+            try:
+                providers_to_use, health_results = await self._filter_healthy_providers(self.providers)
+
+                # Store health check results in session metadata
+                session.metadata["health_checks"] = {
+                    name: {
+                        "status": result.status.value,
+                        "response_time": result.response_time,
+                        "error": result.error,
+                        "is_usable": result.is_usable(),
+                    }
+                    for name, result in health_results.items()
+                }
+
+                logger.info(
+                    f"Using {len(providers_to_use)}/{len(self.providers)} healthy providers"
+                )
+            except InsufficientProvidersError:
+                # Store failure details and re-raise
+                if health_results:
+                    session.metadata["health_checks"] = {
+                        name: {
+                            "status": result.status.value,
+                            "response_time": result.response_time,
+                            "error": result.error,
+                            "is_usable": result.is_usable(),
+                        }
+                        for name, result in health_results.items()
+                    }
+                raise
+
         # Track providers used
-        providers_used = [p.get_provider_name() for p in self.providers]
+        providers_used = [p.get_provider_name() for p in providers_to_use]
         session.metadata["providers_used"] = providers_used
 
         try:
@@ -179,6 +226,7 @@ class Orchestrator:
                     system_prompt=system_prompt,
                     temperature=temperature,
                     max_tokens=max_tokens,
+                    providers=providers_to_use,
                 )
             elif mode == "full_deliberation":
                 await self._execute_full_deliberation(
@@ -188,6 +236,7 @@ class Orchestrator:
                     system_prompt=system_prompt,
                     temperature=temperature,
                     max_tokens=max_tokens,
+                    providers=providers_to_use,
                 )
             elif mode == "devils_advocate":
                 await self._execute_devils_advocate(
@@ -197,6 +246,7 @@ class Orchestrator:
                     system_prompt=system_prompt,
                     temperature=temperature,
                     max_tokens=max_tokens,
+                    providers=providers_to_use,
                 )
 
             # Build consensus from all rounds
@@ -254,6 +304,7 @@ class Orchestrator:
         system_prompt: str | None,
         temperature: float,
         max_tokens: int,
+        providers: list[Provider] | None = None,
     ) -> None:
         """
         Execute quick consensus mode (single round, independent responses).
@@ -268,7 +319,10 @@ class Orchestrator:
             system_prompt: System instructions (optional)
             temperature: Sampling temperature
             max_tokens: Maximum tokens per response
+            providers: List of providers to use (default: self.providers)
         """
+        if providers is None:
+            providers = self.providers
         logger.info(f"Executing quick_consensus for session {session.session_id}")
 
         # Format prompt for single round
@@ -280,7 +334,7 @@ class Orchestrator:
         round_results = await self._run_round(
             session_id=session.session_id,
             round_num=1,
-            providers=self.providers,
+            providers=providers,
             prompt=prompt,
             system_prompt=system_prompt,
             temperature=temperature,
@@ -299,6 +353,7 @@ class Orchestrator:
         system_prompt: str | None,
         temperature: float,
         max_tokens: int,
+        providers: list[Provider] | None = None,
     ) -> None:
         """
         Execute full deliberation mode (3 rounds with cross-review).
@@ -314,7 +369,10 @@ class Orchestrator:
             system_prompt: System instructions (optional)
             temperature: Sampling temperature
             max_tokens: Maximum tokens per response
+            providers: List of providers to use (default: self.providers)
         """
+        if providers is None:
+            providers = self.providers
         logger.info(f"Executing full_deliberation for session {session.session_id}")
 
         # Round 1: Independent analysis
@@ -326,7 +384,7 @@ class Orchestrator:
         round1_results = await self._run_round(
             session_id=session.session_id,
             round_num=1,
-            providers=self.providers,
+            providers=providers,
             prompt=prompt_round1,
             system_prompt=system_prompt,
             temperature=temperature,
@@ -343,7 +401,7 @@ class Orchestrator:
         round2_results = await self._run_round(
             session_id=session.session_id,
             round_num=2,
-            providers=self.providers,
+            providers=providers,
             prompt=prompt_round2,
             system_prompt=system_prompt,
             temperature=temperature,
@@ -360,7 +418,7 @@ class Orchestrator:
         round3_results = await self._run_round(
             session_id=session.session_id,
             round_num=3,
-            providers=self.providers,
+            providers=providers,
             prompt=prompt_round3,
             system_prompt=system_prompt,
             temperature=temperature,
@@ -381,6 +439,7 @@ class Orchestrator:
         system_prompt: str | None,
         temperature: float,
         max_tokens: int,
+        providers: list[Provider] | None = None,
     ) -> None:
         """
         Execute devil's advocate mode (one provider takes critical stance).
@@ -395,15 +454,18 @@ class Orchestrator:
             system_prompt: System instructions (optional)
             temperature: Sampling temperature
             max_tokens: Maximum tokens per response
+            providers: List of providers to use (default: self.providers)
         """
+        if providers is None:
+            providers = self.providers
         logger.info(f"Executing devils_advocate for session {session.session_id}")
 
-        if len(self.providers) < 2:
+        if len(providers) < 2:
             raise InsufficientProvidersError("Devil's advocate mode requires at least 2 providers")
 
         # Round 1: Devil's advocate responds first
-        devils_advocate = self.providers[0]
-        other_providers = self.providers[1:]
+        devils_advocate = providers[0]
+        other_providers = providers[1:]
 
         logger.info(
             f"Session {session.session_id} - Round 1: Devil's advocate ({devils_advocate.get_provider_name()})"
@@ -636,6 +698,86 @@ class Orchestrator:
         if last_error:
             raise last_error
         raise ProviderError("Unknown error during provider query")
+
+    async def _filter_healthy_providers(
+        self, providers: list[Provider]
+    ) -> tuple[list[Provider], dict[str, HealthCheckResult]]:
+        """
+        Filter providers based on health status.
+
+        Performs health checks on all providers and returns only those that are
+        usable (HEALTHY or DEGRADED status). Providers with UNHEALTHY status
+        are filtered out.
+
+        Args:
+            providers: List of providers to check
+
+        Returns:
+            Tuple of (usable_providers, health_results_by_provider)
+
+        Raises:
+            InsufficientProvidersError: If no providers are usable after health checks
+        """
+        logger.info(f"Checking health of {len(providers)} providers...")
+        start_time = time.time()
+
+        # Check health of all providers concurrently
+        health_checks = [provider.check_health() for provider in providers]
+        health_results = await asyncio.gather(*health_checks, return_exceptions=True)
+
+        # Build results map and filter usable providers
+        health_map: dict[str, HealthCheckResult] = {}
+        usable_providers: list[Provider] = []
+
+        for provider, result in zip(providers, health_results):
+            provider_name = provider.get_provider_name()
+
+            # Handle exceptions during health check
+            if isinstance(result, Exception):
+                logger.error(
+                    f"Health check failed for {provider_name}: {result}",
+                    exc_info=result,
+                )
+                # Create unhealthy result for exception
+                health_map[provider_name] = HealthCheckResult(
+                    status=HealthStatus.UNHEALTHY,
+                    response_time=None,
+                    error=f"Health check exception: {str(result)}",
+                    details={"error_type": "health_check_exception"},
+                )
+                continue
+
+            # Store health result
+            health_map[provider_name] = result
+
+            # Include only usable providers (HEALTHY or DEGRADED)
+            if result.is_usable():
+                usable_providers.append(provider)
+                logger.info(
+                    f"Provider {provider_name}: {result.status.value} "
+                    f"(response_time: {result.response_time:.2f}s)"
+                )
+            else:
+                logger.warning(
+                    f"Provider {provider_name}: {result.status.value} - "
+                    f"excluded from execution. Error: {result.error}"
+                )
+
+        elapsed = time.time() - start_time
+        logger.info(
+            f"Health checks complete in {elapsed:.2f}s: "
+            f"{len(usable_providers)}/{len(providers)} providers usable"
+        )
+
+        # Check if we have enough providers
+        if len(usable_providers) < self.min_providers:
+            raise InsufficientProvidersError(
+                f"Only {len(usable_providers)} providers are healthy/usable, "
+                f"but {self.min_providers} required. "
+                f"Health status: {[(p, health_map[p].status.value) for p in health_map]}"
+            )
+
+        return usable_providers, health_map
 
     def _format_prompt_for_round(
         self,
