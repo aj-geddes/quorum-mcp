@@ -9,7 +9,7 @@
 
 ## 🎯 Overview
 
-Quorum-MCP orchestrates multiple AI providers (Claude, GPT, Gemini) through multi-round deliberation to produce consensus-based responses. By combining different AI models, you get more balanced, comprehensive, and reliable answers.
+Quorum-MCP orchestrates multiple AI providers (Anthropic Claude, OpenAI, Google Gemini) through multi-round deliberation to produce consensus-based responses. By combining different AI models, you get more balanced, comprehensive, and reliable answers.
 
 **Why Quorum?**
 - 🎭 **Diverse Perspectives**: Each AI has unique strengths and biases
@@ -23,8 +23,8 @@ Quorum-MCP orchestrates multiple AI providers (Claude, GPT, Gemini) through mult
 - 🤖 **Anthropic Claude** - Thoughtful, nuanced reasoning
   - Models: `claude-3-5-sonnet-20241022` (default), `claude-3-opus`, `claude-3-haiku`
   - Context: 200K tokens | Cost: $3-$15/1M input
-- 🧠 **OpenAI GPT** - Broad knowledge, strong reasoning
-  - Models: `GPTo` (default), `GPTo-mini`, `GPT-turbo`
+- 🧠 **OpenAI** - Broad knowledge, strong reasoning
+  - Models: `gpt-4o` (default), `gpt-4o-mini`, `gpt-4-turbo`
   - Context: 128K tokens | Cost: $0.15-$30/1M input
 - ✨ **Google Gemini** - Fast, cost-effective, huge context
   - Models: `gemini-2.5-flash` (default), `gemini-2.5-pro`, `gemini-1.5-pro`
@@ -241,42 +241,38 @@ python examples/session_demo.py
 
 ## 🏗️ Architecture
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                    MCP Client (Claude Desktop)           │
-└───────────────────────┬─────────────────────────────────┘
-                        │ stdio/HTTP
-                        ▼
-┌─────────────────────────────────────────────────────────┐
-│                    FastMCP Server                        │
-│                    ┌──────────┐  ┌──────────┐           │
-│                    │  q_in    │  │  q_out   │           │
-│                    └────┬─────┘  └─────┬────┘           │
-└─────────────────────────┼──────────────┼────────────────┘
-                          │              │
-                          ▼              ▼
-┌─────────────────────────────────────────────────────────┐
-│                    Orchestrator                          │
-│  ┌─────────────────────────────────────────────────┐    │
-│  │  Consensus Algorithms                           │    │
-│  │  • Agreement detection                          │    │
-│  │  • Confidence scoring                           │    │
-│  │  • Synthesis and summarization                  │    │
-│  └─────────────────────────────────────────────────┘    │
-└────────┬───────────────────┬──────────────────┬─────────┘
-         │                   │                  │
-         ▼                   ▼                  ▼
-┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
-│ AnthropicProvider│  │ OpenAIProvider  │  │ GeminiProvider  │
-│                  │  │                 │  │                 │
-│ • Async client   │  │ • Async client  │  │ • Async client  │
-│ • Token counting │  │ • tiktoken      │  │ • Token counting│
-│ • Cost tracking  │  │ • Cost tracking │  │ • Cost tracking │
-│ • Error mapping  │  │ • Error mapping │  │ • Error mapping │
-└────────┬─────────┘  └────────┬────────┘  └────────┬────────┘
-         │                     │                     │
-         ▼                     ▼                     ▼
-    Anthropic API         OpenAI API           Google AI API
+```mermaid
+graph TD
+    Client[MCP Client<br/>Claude Desktop]
+
+    subgraph FastMCP["FastMCP Server"]
+        QIn[q_in tool]
+        QOut[q_out tool]
+    end
+
+    subgraph Orchestrator["Orchestrator Engine"]
+        Consensus[Consensus Algorithms<br/>• Agreement detection<br/>• Confidence scoring<br/>• Synthesis & summarization]
+    end
+
+    subgraph Providers["AI Providers"]
+        Anthropic[AnthropicProvider<br/>• Async client<br/>• Token counting<br/>• Cost tracking<br/>• Error mapping]
+        OpenAI[OpenAIProvider<br/>• Async client<br/>• tiktoken<br/>• Cost tracking<br/>• Error mapping]
+        Gemini[GeminiProvider<br/>• Async client<br/>• Token counting<br/>• Cost tracking<br/>• Error mapping]
+    end
+
+    AnthropicAPI[Anthropic API]
+    OpenAIAPI[OpenAI API]
+    GeminiAPI[Google AI API]
+
+    Client -->|stdio/HTTP| FastMCP
+    QIn --> Consensus
+    QOut --> Consensus
+    Consensus --> Anthropic
+    Consensus --> OpenAI
+    Consensus --> Gemini
+    Anthropic --> AnthropicAPI
+    OpenAI --> OpenAIAPI
+    Gemini --> GeminiAPI
 ```
 
 ## 📁 Project Structure
@@ -292,7 +288,7 @@ quorum-mcp/
 │       ├── __init__.py
 │       ├── base.py            # Abstract provider interface
 │       ├── anthropic_provider.py  # Claude integration
-│       ├── openai_provider.py     # GPT integration
+│       ├── openai_provider.py     # OpenAI integration
 │       └── gemini_provider.py     # Gemini integration
 ├── examples/
 │   ├── three_provider_demo.py  # Demo with all 3 providers
@@ -388,7 +384,7 @@ Total                             31%
 ### ✅ Phase 1: MVP (Complete)
 - [x] Provider abstraction layer
 - [x] Anthropic Claude integration
-- [x] OpenAI GPT integration
+- [x] OpenAI integration
 - [x] Basic orchestration engine
 - [x] Session management
 - [x] FastMCP server with q_in/q_out
@@ -488,7 +484,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 - Powered by [FastMCP](https://github.com/jlowin/fastmcp)
 - Utilizes:
   - [Anthropic Claude](https://www.anthropic.com/)
-  - [OpenAI GPT](https://openai.com/)
+  - [OpenAI](https://openai.com/)
   - [Google Gemini](https://deepmind.google/technologies/gemini/)
 
 ## 📬 Contact

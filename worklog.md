@@ -2320,3 +2320,48 @@ Successfully completed Phase 3 by implementing Google Gemini provider with full 
 
 ---
 
+## Session 12: Documentation Refinement (2025-11-06)
+
+### Agent: Primary Developer
+
+**Timestamp**: 2025-11-06 (Continuation after context summary)
+
+**User Feedback**:
+- "GPT-4 is so old, why do we mention GPT-4? why not OpenAI the company?"
+- "This should be a mermaid chart" (referring to ASCII architecture diagram)
+- "anything else that needs to be made into a mermaid diagram?"
+
+**Actions Taken**:
+
+1. ✅ Updated README.md terminology to be company-focused
+   - Changed "Claude, GPT-4, Gemini" → "Anthropic Claude, OpenAI, Google Gemini"
+   - Changed "**OpenAI GPT-4**" → "**OpenAI**" in provider descriptions
+   - Updated project structure comment: "# GPT-4 integration" → "# OpenAI integration"
+   - Updated roadmap: "OpenAI GPT-4 integration" → "OpenAI integration"
+   - Updated acknowledgments: "[OpenAI GPT-4]" → "[OpenAI]"
+
+2. ✅ Converted ASCII architecture diagram to Mermaid
+   - Created professional flowchart with subgraphs
+   - Organized into logical sections: Client, FastMCP Server, Orchestrator, Providers, APIs
+   - Preserved all technical details from ASCII version
+   - Added proper labels and connection descriptions
+   - Improved readability and GitHub rendering
+
+**Rationale**:
+User correctly identified that model version references (GPT-4) become outdated quickly. Company-focused naming (OpenAI, Anthropic, Google) is more sustainable and less version-specific. Model details remain visible in technical sections where appropriate.
+
+**Changes Made**:
+- README.md: 5 terminology updates + architecture diagram conversion to Mermaid
+
+**Quality Improvements**:
+- More sustainable documentation (company names vs model versions)
+- Better visual representation with Mermaid (GitHub renders natively)
+- Consistent branding throughout documentation
+
+**Next Steps**:
+- Commit documentation improvements
+- Update worklog with session details
+- Continue with future roadmap items (Phase 4: Local LLMs)
+
+---
+
