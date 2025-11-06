@@ -28,6 +28,11 @@ class SessionStatus(str, Enum):
     FAILED = "failed"
 
 
+def _get_utcnow() -> datetime:
+    """Get current UTC time. Separate function to enable mocking in tests."""
+    return datetime.utcnow()
+
+
 class Session(BaseModel):
     """
     Session model representing a single quorum consultation.
@@ -42,10 +47,10 @@ class Session(BaseModel):
         default_factory=lambda: str(uuid4()), description="Unique session identifier (UUID)"
     )
     created_at: datetime = Field(
-        default_factory=datetime.utcnow, description="Timestamp when session was created"
+        default_factory=_get_utcnow, description="Timestamp when session was created"
     )
     updated_at: datetime = Field(
-        default_factory=datetime.utcnow, description="Timestamp of last session update"
+        default_factory=_get_utcnow, description="Timestamp of last session update"
     )
     status: SessionStatus = Field(
         default=SessionStatus.PENDING, description="Current session status"
@@ -155,13 +160,12 @@ class SessionManager:
 
     async def stop(self) -> None:
         """Stop background cleanup task"""
-        if self._cleanup_task is not None:
+        if self._cleanup_task is not None and not self._cleanup_task.done():
             self._cleanup_task.cancel()
             try:
                 await self._cleanup_task
             except asyncio.CancelledError:
                 pass
-            self._cleanup_task = None
             logger.info("Background cleanup task stopped")
 
     async def _cleanup_loop(self) -> None:

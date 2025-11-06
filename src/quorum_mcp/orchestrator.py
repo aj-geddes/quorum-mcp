@@ -138,6 +138,15 @@ class Orchestrator:
             OrchestratorError: If orchestration fails
             InsufficientProvidersError: If too few providers succeed
         """
+        # Validate inputs
+        if not query or not query.strip():
+            raise ValueError("Query cannot be empty")
+
+        # Validate mode
+        valid_modes = ["quick_consensus", "full_deliberation", "devils_advocate"]
+        if mode not in valid_modes:
+            raise ValueError(f"Unsupported mode: {mode}. Valid modes: {valid_modes}")
+
         start_time = time.time()
 
         # Create or retrieve session
@@ -155,6 +164,10 @@ class Orchestrator:
         await self.session_manager.update_session(
             session.session_id, {"status": SessionStatus.IN_PROGRESS}
         )
+
+        # Track providers used
+        providers_used = [p.get_provider_name() for p in self.providers]
+        session.metadata["providers_used"] = providers_used
 
         try:
             # Execute based on mode
@@ -185,8 +198,6 @@ class Orchestrator:
                     temperature=temperature,
                     max_tokens=max_tokens,
                 )
-            else:
-                raise OrchestratorError(f"Unknown mode: {mode}")
 
             # Build consensus from all rounds
             consensus = await self._build_consensus(session.session_id)
@@ -226,6 +237,13 @@ class Orchestrator:
                 session.session_id, {"status": SessionStatus.FAILED, "error": error_msg}
             )
 
+            # For certain errors, return the failed session instead of raising
+            # This allows callers to examine the failure details
+            if isinstance(e, (InsufficientProvidersError, OrchestratorError)):
+                session = await self.session_manager.get_session(session.session_id)
+                return session
+
+            # For other errors, re-raise
             raise OrchestratorError(error_msg) from e
 
     async def _execute_quick_consensus(
@@ -794,15 +812,20 @@ class Orchestrator:
         total_cost = 0.0
         total_tokens_input = 0
         total_tokens_output = 0
+        provider_costs = {}
 
-        for _provider_name, rounds in session.provider_responses.items():
+        for provider_name, rounds in session.provider_responses.items():
+            provider_cost = 0.0
             for _round_num, response in rounds.items():
                 if "cost" in response:
-                    total_cost += response.get("cost", 0.0)
+                    cost = response.get("cost", 0.0)
+                    total_cost += cost
+                    provider_cost += cost
                 if "tokens_input" in response:
                     total_tokens_input += response.get("tokens_input", 0)
                 if "tokens_output" in response:
                     total_tokens_output += response.get("tokens_output", 0)
+            provider_costs[provider_name] = provider_cost
 
         consensus = {
             "summary": summary,
@@ -818,6 +841,7 @@ class Orchestrator:
                 "total_tokens_input": total_tokens_input,
                 "total_tokens_output": total_tokens_output,
                 "avg_cost_per_provider": total_cost / provider_count if provider_count > 0 else 0.0,
+                "providers": provider_costs,
             },
         }
 
