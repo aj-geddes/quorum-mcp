@@ -65,8 +65,8 @@ class Orchestrator:
     def __init__(
         self,
         providers: list[Provider],
-        session_manager: SessionManager,
-        min_providers: int = 2,
+        session_manager: SessionManager | None = None,
+        min_providers: int = 1,
         provider_timeout: float = 60.0,
         max_retries: int = 1,
     ):
@@ -75,21 +75,24 @@ class Orchestrator:
 
         Args:
             providers: List of Provider instances to orchestrate
-            session_manager: SessionManager instance for state tracking
-            min_providers: Minimum providers required for consensus (default: 2)
+            session_manager: SessionManager instance for state tracking (optional, created if None)
+            min_providers: Minimum providers required for consensus (default: 1)
             provider_timeout: Timeout per provider request in seconds (default: 60.0)
             max_retries: Maximum retry attempts per provider (default: 1)
 
         Raises:
-            InsufficientProvidersError: If fewer than min_providers provided
+            ValueError: If no providers provided
         """
+        if len(providers) == 0:
+            raise ValueError("At least one provider is required")
+
         if len(providers) < min_providers:
             raise InsufficientProvidersError(
                 f"At least {min_providers} providers required, got {len(providers)}"
             )
 
         self.providers = providers
-        self.session_manager = session_manager
+        self.session_manager = session_manager or SessionManager()
         self.min_providers = min_providers
         self.provider_timeout = provider_timeout
         self.max_retries = max_retries
@@ -748,7 +751,8 @@ class Orchestrator:
             latest_round = max(rounds.keys())
             response = rounds[latest_round]
 
-            if "error" not in response and "content" in response:
+            # Check if response is successful (has content and no error)
+            if isinstance(response, dict) and response.get("content") and not response.get("error"):
                 all_responses.append(response["content"])
                 provider_names.append(provider_name)
 
