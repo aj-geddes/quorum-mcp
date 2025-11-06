@@ -17,6 +17,9 @@ Core Components:
 __version__ = "0.1.0"
 __author__ = "Quorum-MCP Contributors"
 
+# Export orchestration components
+from .orchestrator import Orchestrator, OrchestratorError, InsufficientProvidersError
+
 # Export session management components
 from .session import (
     Session,
@@ -28,6 +31,9 @@ from .session import (
 __all__ = [
     "__version__",
     "__author__",
+    "Orchestrator",
+    "OrchestratorError",
+    "InsufficientProvidersError",
     "Session",
     "SessionStatus",
     "SessionManager",

@@ -39,6 +39,7 @@ Usage Example:
     ```
 """
 
+from quorum_mcp.providers.anthropic_provider import AnthropicProvider
 from quorum_mcp.providers.base import (
     # Base classes
     Provider,
@@ -59,10 +60,14 @@ from quorum_mcp.providers.base import (
     RateLimitConfig,
     RetryConfig,
 )
+from quorum_mcp.providers.openai_provider import OpenAIProvider
 
 __all__ = [
     # Base classes
     "Provider",
+    # Provider implementations
+    "AnthropicProvider",
+    "OpenAIProvider",
     # Data models
     "ProviderRequest",
     "ProviderResponse",

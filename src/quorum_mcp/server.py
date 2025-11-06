@@ -10,9 +10,14 @@ The server uses stdio transport for integration with Claude Desktop and other MC
 
 import asyncio
 import logging
+import os
 from typing import Any
 
 from mcp.server.fastmcp import FastMCP
+
+from quorum_mcp.orchestrator import Orchestrator
+from quorum_mcp.providers import AnthropicProvider, OpenAIProvider
+from quorum_mcp.session import SessionManager, get_session_manager
 
 # Initialize FastMCP server
 mcp = FastMCP("Quorum-MCP")
@@ -23,9 +28,17 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Global instances (initialized in main)
+_session_manager: SessionManager | None = None
+_orchestrator: Orchestrator | None = None
+
 
 @mcp.tool()
-async def q_in(query: str, context: str | None = None) -> dict[str, Any]:
+async def q_in(
+    query: str,
+    context: str | None = None,
+    mode: str = "quick_consensus",
+) -> dict[str, Any]:
     """
     Submit a query to the quorum for consensus-based response.
 
@@ -35,76 +48,163 @@ async def q_in(query: str, context: str | None = None) -> dict[str, Any]:
     Args:
         query: The user's question or prompt to be processed by the quorum
         context: Optional additional context or constraints for the query
+        mode: Operational mode - "quick_consensus", "full_deliberation", or "devils_advocate"
 
     Returns:
         A dictionary containing:
         - session_id: Unique identifier for this quorum session
-        - status: Current status of the deliberation (initiated, processing, etc.)
+        - status: Current status of the deliberation (completed, failed, etc.)
         - message: Human-readable status message
-        - estimated_time: Estimated time to completion in seconds
+        - consensus: The consensus result (if completed)
+        - confidence: Confidence score (0.0-1.0)
+        - cost: Total cost in USD
 
     Example:
         >>> result = await q_in(
         ...     query="What are the best practices for API design?",
-        ...     context="Focus on REST APIs and modern standards"
+        ...     context="Focus on REST APIs and modern standards",
+        ...     mode="full_deliberation"
         ... )
-        >>> print(result["session_id"])
-        "qrm_abc123def456"
+        >>> print(result["consensus"]["summary"])
+        "Based on consensus across multiple AI models..."
     """
-    logger.info(f"q_in called with query: {query[:100]}...")
+    global _orchestrator, _session_manager
 
-    # TODO: Implement actual orchestration logic
-    # For now, return a placeholder response structure
-    session_id = f"qrm_{asyncio.get_event_loop().time():.0f}"
+    logger.info(f"q_in called with query: {query[:100]}... (mode: {mode})")
 
-    return {
-        "session_id": session_id,
-        "status": "initiated",
-        "message": "Query submitted to quorum. Processing will begin shortly.",
-        "estimated_time": 30,
-        "query": query,
-        "context": context,
-    }
+    if _orchestrator is None or _session_manager is None:
+        return {
+            "error": "Server not initialized. Please check API keys are configured.",
+            "status": "error",
+        }
+
+    try:
+        # Execute quorum consensus
+        session = await _orchestrator.execute_quorum(query=query, context=context or "", mode=mode)
+
+        # Return results
+        return {
+            "session_id": session.session_id,
+            "status": session.status.value,
+            "message": f"Quorum consensus completed using {mode} mode",
+            "consensus": session.consensus,
+            "confidence": session.consensus.get("confidence", 0.0) if session.consensus else 0.0,
+            "cost": session.metadata.get("total_cost", 0.0),
+            "providers_used": session.metadata.get("providers_used", []),
+        }
+
+    except Exception as e:
+        logger.error(f"Error in q_in: {e}", exc_info=True)
+        return {
+            "error": str(e),
+            "status": "failed",
+            "message": f"Quorum consensus failed: {e}",
+        }
 
 
 @mcp.tool()
-async def q_out(session_id: str, wait: bool = True) -> dict[str, Any]:
+async def q_out(session_id: str) -> dict[str, Any]:
     """
     Retrieve the consensus results from a quorum session.
 
-    This tool fetches the results of a deliberation session initiated by q_in.
-    It can either wait for completion or return the current state immediately.
+    This tool fetches the results of a deliberation session by session ID.
 
     Args:
-        session_id: The unique session identifier returned by q_in
-        wait: If True, waits for session completion. If False, returns current state.
+        session_id: The unique session identifier
 
     Returns:
         A dictionary containing:
         - session_id: The session identifier
-        - status: Session status (processing, completed, failed, etc.)
-        - consensus_response: The final consensus response (if completed)
+        - status: Session status (completed, failed, etc.)
+        - consensus: The final consensus result (if completed)
         - confidence: Confidence score (0.0-1.0) of the consensus
-        - provider_responses: Individual responses from each provider
         - metadata: Additional information (rounds, tokens, cost, etc.)
 
     Example:
-        >>> result = await q_out(session_id="qrm_abc123def456", wait=True)
-        >>> print(result["consensus_response"])
+        >>> result = await q_out(session_id="abc-123")
+        >>> print(result["consensus"]["summary"])
         "Based on consensus across multiple AI models..."
     """
+    global _session_manager
+
     logger.info(f"q_out called for session: {session_id}")
 
-    # TODO: Implement actual session retrieval and result synthesis
-    # For now, return a placeholder response structure
-    return {
-        "session_id": session_id,
-        "status": "processing",
-        "message": "Quorum deliberation in progress. Results not yet available.",
-        "progress": 0.3,
-        "current_round": 1,
-        "max_rounds": 3,
-    }
+    if _session_manager is None:
+        return {"error": "Server not initialized", "status": "error"}
+
+    try:
+        # Retrieve session
+        session = await _session_manager.get_session(session_id)
+
+        if session is None:
+            return {
+                "error": f"Session {session_id} not found or expired",
+                "status": "not_found",
+            }
+
+        # Return session data
+        return {
+            "session_id": session.session_id,
+            "status": session.status.value,
+            "query": session.query,
+            "mode": session.mode,
+            "consensus": session.consensus,
+            "confidence": session.consensus.get("confidence", 0.0) if session.consensus else 0.0,
+            "created_at": session.created_at.isoformat(),
+            "updated_at": session.updated_at.isoformat(),
+            "metadata": session.metadata,
+        }
+
+    except Exception as e:
+        logger.error(f"Error in q_out: {e}", exc_info=True)
+        return {
+            "error": str(e),
+            "status": "error",
+            "message": f"Failed to retrieve session: {e}",
+        }
+
+
+async def initialize_server() -> None:
+    """Initialize server components (providers, session manager, orchestrator)."""
+    global _session_manager, _orchestrator
+
+    logger.info("Initializing Quorum-MCP server components...")
+
+    # Initialize session manager
+    _session_manager = get_session_manager()
+    await _session_manager.start()
+    logger.info("Session manager initialized")
+
+    # Initialize providers
+    providers = []
+
+    # Try to initialize Anthropic provider
+    if os.getenv("ANTHROPIC_API_KEY"):
+        try:
+            claude = AnthropicProvider()
+            providers.append(claude)
+            logger.info("Anthropic provider initialized")
+        except Exception as e:
+            logger.warning(f"Failed to initialize Anthropic provider: {e}")
+
+    # Try to initialize OpenAI provider
+    if os.getenv("OPENAI_API_KEY"):
+        try:
+            gpt4 = OpenAIProvider()
+            providers.append(gpt4)
+            logger.info("OpenAI provider initialized")
+        except Exception as e:
+            logger.warning(f"Failed to initialize OpenAI provider: {e}")
+
+    if len(providers) == 0:
+        logger.error(
+            "No providers initialized. Please set ANTHROPIC_API_KEY and/or OPENAI_API_KEY environment variables."
+        )
+        return
+
+    # Initialize orchestrator
+    _orchestrator = Orchestrator(providers=providers, session_manager=_session_manager)
+    logger.info(f"Orchestrator initialized with {len(providers)} provider(s)")
 
 
 def main() -> None:
@@ -115,14 +215,21 @@ def main() -> None:
     making it compatible with Claude Desktop and other MCP clients.
 
     The server will:
-    1. Load configuration from config.yaml (if available)
-    2. Initialize AI provider connections
+    1. Initialize AI provider connections (Anthropic, OpenAI)
+    2. Initialize session management
     3. Start the MCP server on stdio transport
     4. Handle incoming tool requests (q_in, q_out)
+
+    Environment Variables Required:
+    - ANTHROPIC_API_KEY: API key for Claude (optional if OpenAI is set)
+    - OPENAI_API_KEY: API key for GPT-4 (optional if Anthropic is set)
     """
     logger.info("Starting Quorum-MCP server...")
 
     try:
+        # Initialize server components
+        asyncio.run(initialize_server())
+
         # Run the FastMCP server
         # FastMCP automatically handles stdio transport by default
         mcp.run()
