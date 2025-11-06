@@ -62,6 +62,7 @@ from quorum_mcp.providers.base import (
 )
 from quorum_mcp.providers.gemini_provider import GeminiProvider
 from quorum_mcp.providers.ollama_provider import OllamaProvider
+from quorum_mcp.providers.openai_compatible_provider import OpenAICompatibleProvider
 from quorum_mcp.providers.openai_provider import OpenAIProvider
 
 __all__ = [
@@ -70,6 +71,7 @@ __all__ = [
     # Provider implementations
     "AnthropicProvider",
     "OpenAIProvider",
+    "OpenAICompatibleProvider",
     "GeminiProvider",
     "OllamaProvider",
     # Data models
