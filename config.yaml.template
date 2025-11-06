@@ -1,0 +1,109 @@
+# Quorum-MCP Server Configuration Template
+# Copy this file to 'config.yaml' and fill in your API keys
+
+# Server Metadata
+server:
+  name: "Quorum-MCP"
+  version: "0.1.0"
+  description: "Multi-AI Consensus System MCP Server"
+  transport: "stdio"  # MCP transport protocol (stdio, sse, websocket)
+
+# AI Provider Configurations
+providers:
+  # Anthropic Claude Configuration
+  claude:
+    enabled: true
+    api_key: "${ANTHROPIC_API_KEY}"  # Environment variable or direct value
+    model: "claude-sonnet-4-5-20250929"  # Default model
+    max_tokens: 4096
+    temperature: 0.7
+    timeout: 30  # Request timeout in seconds
+
+  # OpenAI GPT Configuration
+  openai:
+    enabled: true
+    api_key: "${OPENAI_API_KEY}"  # Environment variable or direct value
+    model: "gpt-4-turbo-preview"  # Default model
+    max_tokens: 4096
+    temperature: 0.7
+    timeout: 30
+
+  # Google Gemini Configuration (Future)
+  gemini:
+    enabled: false
+    api_key: "${GEMINI_API_KEY}"
+    model: "gemini-pro"
+    max_tokens: 4096
+    temperature: 0.7
+    timeout: 30
+
+  # Mistral AI Configuration (Future)
+  mistral:
+    enabled: false
+    api_key: "${MISTRAL_API_KEY}"
+    model: "mistral-large-latest"
+    max_tokens: 4096
+    temperature: 0.7
+    timeout: 30
+
+# Orchestration Parameters
+orchestration:
+  # Deliberation settings
+  max_rounds: 3  # Maximum deliberation rounds
+  min_providers: 2  # Minimum providers required for consensus
+  timeout_per_round: 60  # Timeout per round in seconds
+
+  # Consensus thresholds
+  consensus_threshold: 0.75  # Similarity threshold for consensus (0.0-1.0)
+  confidence_threshold: 0.8  # Minimum confidence for accepting response
+
+  # Session management
+  session_timeout: 3600  # Session timeout in seconds (1 hour)
+  max_sessions: 100  # Maximum concurrent sessions
+
+  # Cost controls
+  max_cost_per_query: 1.0  # Maximum cost per query in USD
+  budget_limit: 100.0  # Daily budget limit in USD
+
+# Synthesis Configuration
+synthesis:
+  # Response aggregation
+  aggregation_method: "weighted_average"  # weighted_average, majority_vote, or consensus
+
+  # Quality metrics
+  enable_quality_scoring: true
+  quality_weights:
+    accuracy: 0.4
+    coherence: 0.3
+    completeness: 0.2
+    consistency: 0.1
+
+# Logging Configuration
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  format: "json"  # json or text
+  output: "stdout"  # stdout, file, or both
+  file_path: "logs/quorum-mcp.log"
+  rotation: "daily"  # daily, weekly, or size-based
+  max_size: "100MB"
+  retention_days: 30
+
+# Feature Flags
+features:
+  enable_caching: true
+  enable_metrics: true
+  enable_rate_limiting: true
+  enable_debug_mode: false
+
+# Rate Limiting (per provider)
+rate_limits:
+  requests_per_minute: 60
+  tokens_per_minute: 100000
+  concurrent_requests: 5
+
+# Cache Configuration
+cache:
+  enabled: true
+  ttl: 3600  # Cache TTL in seconds
+  max_size: 1000  # Maximum cache entries
+  eviction_policy: "lru"  # lru or fifo
