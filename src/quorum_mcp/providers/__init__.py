@@ -56,6 +56,9 @@ from quorum_mcp.providers.base import (
     ProviderResponse,
     ProviderTimeoutError,
     ProviderType,
+    # Health monitoring
+    HealthStatus,
+    HealthCheckResult,
     # Configuration models
     RateLimitConfig,
     RetryConfig,
@@ -80,6 +83,9 @@ __all__ = [
     "ProviderRequest",
     "ProviderResponse",
     "ProviderType",
+    # Health monitoring
+    "HealthStatus",
+    "HealthCheckResult",
     # Configuration models
     "RateLimitConfig",
     "RetryConfig",

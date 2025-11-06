@@ -31,6 +31,14 @@ class ProviderType(str, Enum):
     CUSTOM = "custom"
 
 
+class HealthStatus(str, Enum):
+    """Provider health status levels."""
+
+    HEALTHY = "healthy"  # Provider is fully operational
+    DEGRADED = "degraded"  # Provider is working but with issues (slow, rate limited)
+    UNHEALTHY = "unhealthy"  # Provider is not operational
+
+
 class ProviderError(Exception):
     """Base exception class for provider-related errors."""
 
@@ -346,6 +354,46 @@ class RetryConfig(BaseModel):
     )
 
 
+class HealthCheckResult(BaseModel):
+    """Result of a provider health check."""
+
+    model_config = ConfigDict(frozen=False)
+
+    status: HealthStatus = Field(
+        ...,
+        description="Overall health status of the provider",
+    )
+
+    response_time: float | None = Field(
+        default=None,
+        description="Response time in seconds for the health check",
+        ge=0.0,
+    )
+
+    error: str | None = Field(
+        default=None,
+        description="Error message if health check failed",
+    )
+
+    details: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Additional health check details (model availability, rate limits, etc.)",
+    )
+
+    timestamp: datetime = Field(
+        default_factory=datetime.utcnow,
+        description="When the health check was performed",
+    )
+
+    def is_healthy(self) -> bool:
+        """Check if provider is healthy."""
+        return self.status == HealthStatus.HEALTHY
+
+    def is_usable(self) -> bool:
+        """Check if provider is usable (healthy or degraded)."""
+        return self.status in (HealthStatus.HEALTHY, HealthStatus.DEGRADED)
+
+
 class Provider(ABC):
     """
     Abstract base class for AI provider implementations.
@@ -553,6 +601,128 @@ class Provider(ABC):
         delay = min(delay, self.retry_config.max_delay)
 
         return delay
+
+    async def check_health(self) -> HealthCheckResult:
+        """
+        Check the health status of this provider.
+
+        This method performs a lightweight health check by sending a minimal test
+        request to the provider. Subclasses can override this to implement
+        provider-specific health checks.
+
+        The default implementation sends a simple test query and measures:
+        - Connectivity (can we reach the API?)
+        - Authentication (is our API key valid?)
+        - Response time (how fast is the provider responding?)
+
+        Returns:
+            HealthCheckResult with status, response time, and any errors
+
+        Example:
+            >>> provider = OpenAIProvider()
+            >>> health = await provider.check_health()
+            >>> if health.is_healthy():
+            ...     print("Provider is ready!")
+        """
+        import time
+
+        start_time = time.time()
+        details: dict[str, Any] = {
+            "provider": self.get_provider_name(),
+            "model": self.model,
+        }
+
+        try:
+            # Create a minimal test request
+            test_request = ProviderRequest(
+                query="test",  # Minimal query
+                max_tokens=5,  # Minimal tokens
+                temperature=0.0,  # Deterministic
+                timeout=10.0,  # Short timeout for health check
+            )
+
+            # Attempt to send the request
+            response = await self.send_request(test_request)
+
+            # Calculate response time
+            response_time = time.time() - start_time
+            details["response_time"] = response_time
+            details["tokens_used"] = response.tokens_input + response.tokens_output
+
+            # Determine status based on response time
+            if response_time < 2.0:
+                status = HealthStatus.HEALTHY
+            elif response_time < 5.0:
+                status = HealthStatus.DEGRADED
+                details["reason"] = "Slow response time"
+            else:
+                status = HealthStatus.DEGRADED
+                details["reason"] = "Very slow response time"
+
+            return HealthCheckResult(
+                status=status,
+                response_time=response_time,
+                details=details,
+            )
+
+        except ProviderAuthenticationError as e:
+            # Authentication failed - provider is unhealthy
+            return HealthCheckResult(
+                status=HealthStatus.UNHEALTHY,
+                response_time=time.time() - start_time,
+                error=f"Authentication failed: {str(e)}",
+                details={**details, "error_type": "authentication"},
+            )
+
+        except ProviderRateLimitError as e:
+            # Rate limited - provider is degraded but usable after wait
+            return HealthCheckResult(
+                status=HealthStatus.DEGRADED,
+                response_time=time.time() - start_time,
+                error=f"Rate limited: {str(e)}",
+                details={
+                    **details,
+                    "error_type": "rate_limit",
+                    "retry_after": e.retry_after,
+                },
+            )
+
+        except ProviderConnectionError as e:
+            # Cannot connect - provider is unhealthy
+            return HealthCheckResult(
+                status=HealthStatus.UNHEALTHY,
+                response_time=time.time() - start_time,
+                error=f"Connection failed: {str(e)}",
+                details={**details, "error_type": "connection"},
+            )
+
+        except ProviderTimeoutError as e:
+            # Timeout - provider is degraded or unhealthy
+            response_time = time.time() - start_time
+            return HealthCheckResult(
+                status=HealthStatus.UNHEALTHY,
+                response_time=response_time,
+                error=f"Request timed out: {str(e)}",
+                details={**details, "error_type": "timeout"},
+            )
+
+        except ProviderError as e:
+            # Other provider error - provider is likely unhealthy
+            return HealthCheckResult(
+                status=HealthStatus.UNHEALTHY,
+                response_time=time.time() - start_time,
+                error=f"Provider error: {str(e)}",
+                details={**details, "error_type": "provider_error"},
+            )
+
+        except Exception as e:
+            # Unexpected error - provider is unhealthy
+            return HealthCheckResult(
+                status=HealthStatus.UNHEALTHY,
+                response_time=time.time() - start_time,
+                error=f"Unexpected error: {str(e)}",
+                details={**details, "error_type": "unexpected"},
+            )
 
     def __repr__(self) -> str:
         """Return a string representation of the provider."""
