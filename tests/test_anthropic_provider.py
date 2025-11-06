@@ -38,7 +38,7 @@ def anthropic_provider():
 def sample_request():
     """Create sample provider request."""
     return ProviderRequest(
-        prompt="What is Python?",
+        query="What is Python?",
         context="Programming language",
         system_prompt="You are a helpful assistant.",
         max_tokens=1000,

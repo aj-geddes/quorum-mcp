@@ -473,19 +473,20 @@ class AnthropicProvider(Provider):
         """
         Count tokens in text using Anthropic's token counting.
 
-        Note: Anthropic's SDK provides a token counting API, but for efficiency
-        we use an approximation. For more accurate counts, use the API directly.
-
         Args:
             text: Text to count tokens for
 
         Returns:
-            Approximate token count
+            Token count
         """
         # Use Anthropic's token counting API
         try:
-            result = await self.client.count_tokens(text)
-            return result
+            # Format as a message for token counting
+            result = await self.client.messages.count_tokens(
+                model=self.model,
+                messages=[{"role": "user", "content": text}],
+            )
+            return result.input_tokens
         except Exception:
             # Fallback to approximation if API call fails
             # Claude uses roughly 4 characters per token on average
@@ -538,19 +539,45 @@ class AnthropicProvider(Provider):
         pricing = self.MODEL_PRICING.get(self.model, self.MODEL_PRICING[self.DEFAULT_MODEL])
 
         return {
-            "name": self.model,
             "provider": self.get_provider_name(),
+            "model": self.model,
             "context_window": context_window,
-            "max_output_tokens": 4096,
             "pricing": {
-                "input_per_million": pricing["input"],
-                "output_per_million": pricing["output"],
-                "currency": "USD",
+                "input": pricing["input"],
+                "output": pricing["output"],
             },
-            "supports_streaming": True,
-            "supports_function_calling": True,
-            "supports_vision": "claude-3" in self.model,
         }
+
+    @classmethod
+    def list_available_models(cls) -> list[str]:
+        """
+        List all available Anthropic models.
+
+        Returns:
+            List of model identifiers
+        """
+        return list(cls.MODEL_PRICING.keys())
+
+    def _validate_model(self, model: str | None) -> None:
+        """
+        Validate that a model is supported.
+
+        Args:
+            model: Model identifier to validate, or None for default
+
+        Raises:
+            ProviderModelError: If model is not supported
+        """
+        # None is valid (uses default)
+        if model is None:
+            return
+
+        # Check if model is in supported models
+        if model not in self.MODEL_PRICING:
+            raise ProviderModelError(
+                f"Unsupported model: {model}. Available models: {self.list_available_models()}",
+                provider=self.get_provider_name(),
+            )
 
     async def _async_sleep(self, seconds: float) -> None:
         """

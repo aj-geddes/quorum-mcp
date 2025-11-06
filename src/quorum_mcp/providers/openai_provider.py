@@ -172,20 +172,8 @@ class OpenAIProvider(Provider):
         # Use request model or fall back to provider default
         model = request.model or self.model
 
-        # Build messages array for OpenAI API
-        messages = []
-
-        # Add system prompt if provided
-        if request.system_prompt:
-            messages.append({"role": "system", "content": request.system_prompt})
-
-        # Add context if provided (as a system message)
-        if request.context:
-            context_content = f"Context: {request.context}"
-            messages.append({"role": "system", "content": context_content})
-
-        # Add the user query
-        messages.append({"role": "user", "content": request.query})
+        # Format messages using helper method
+        messages = self._format_messages(request)
 
         # Prepare API call parameters
         api_params: dict[str, Any] = {
@@ -350,7 +338,7 @@ class OpenAIProvider(Provider):
         Calculate the cost of an API call based on token usage.
 
         Uses model-specific pricing from MODEL_PRICING. If the model
-        is not found, falls back to GPT-4-turbo pricing.
+        is not found, falls back to GPT-4o pricing.
 
         Args:
             tokens_input: Number of input tokens
@@ -359,10 +347,10 @@ class OpenAIProvider(Provider):
         Returns:
             Cost in USD
         """
-        # Get pricing for the current model, or fall back to gpt-4-turbo
+        # Get pricing for the current model, or fall back to gpt-4o
         pricing = self.MODEL_PRICING.get(
             self.model,
-            self.MODEL_PRICING["gpt-4-turbo-preview"],
+            self.MODEL_PRICING["gpt-4o"],
         )
 
         # Calculate cost (pricing is per 1M tokens)
@@ -386,28 +374,83 @@ class OpenAIProvider(Provider):
 
         Returns:
             Dictionary containing model metadata including:
-            - name: Model identifier
+            - model: Model identifier
             - provider: Provider name
             - context_window: Maximum context length in tokens
             - pricing: Pricing information per 1M tokens
         """
         pricing = self.MODEL_PRICING.get(
             self.model,
-            self.MODEL_PRICING["gpt-4-turbo-preview"],
+            self.MODEL_PRICING["gpt-4o"],
         )
 
         context_window = self.MODEL_CONTEXT.get(
             self.model,
-            self.MODEL_CONTEXT["gpt-4-turbo-preview"],
+            self.MODEL_CONTEXT["gpt-4o"],
         )
 
         return {
-            "name": self.model,
             "provider": "openai",
+            "model": self.model,
             "context_window": context_window,
             "pricing": {
-                "input_per_1m": pricing["input"],
-                "output_per_1m": pricing["output"],
-                "currency": "USD",
+                "input": pricing["input"],
+                "output": pricing["output"],
             },
         }
+
+    @classmethod
+    def list_available_models(cls) -> list[str]:
+        """
+        List all available OpenAI models.
+
+        Returns:
+            List of model identifiers
+        """
+        return list(cls.MODEL_PRICING.keys())
+
+    def _validate_model(self, model: str | None) -> None:
+        """
+        Validate that a model is supported.
+
+        Args:
+            model: Model identifier to validate, or None for default
+
+        Raises:
+            ProviderModelError: If model is not supported
+        """
+        # None is valid (uses default)
+        if model is None:
+            return
+
+        # Check if model is in supported models
+        if model not in self.MODEL_PRICING:
+            raise ProviderModelError(
+                f"Unsupported model: {model}. Available models: {self.list_available_models()}",
+                provider=self.get_provider_name(),
+            )
+
+    def _format_messages(self, request: ProviderRequest) -> list[dict[str, str]]:
+        """
+        Format messages for OpenAI API.
+
+        Args:
+            request: The provider request
+
+        Returns:
+            List of message dictionaries
+        """
+        messages = []
+
+        # Add system prompt if provided
+        if request.system_prompt:
+            messages.append({"role": "system", "content": request.system_prompt})
+
+        # Build user message with context if provided
+        user_content = request.query
+        if request.context:
+            user_content = f"{request.context}\n\n{request.query}"
+
+        messages.append({"role": "user", "content": user_content})
+
+        return messages

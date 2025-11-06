@@ -40,7 +40,7 @@ def openai_provider():
 def sample_request():
     """Create sample provider request."""
     return ProviderRequest(
-        prompt="What is Python?",
+        query="What is Python?",
         context="Programming language",
         system_prompt="You are a helpful assistant.",
         max_tokens=1000,
@@ -384,7 +384,7 @@ class TestOpenAIProviderMessageFormatting:
     def test_format_messages_without_system_prompt(self, openai_provider):
         """Test message formatting without system prompt."""
         request = ProviderRequest(
-            prompt="What is Python?",
+            query="What is Python?",
             context="",
             system_prompt=None,
             max_tokens=1000,
@@ -400,7 +400,7 @@ class TestOpenAIProviderMessageFormatting:
     def test_format_messages_with_context(self, openai_provider):
         """Test message formatting with context."""
         request = ProviderRequest(
-            prompt="What is it?",
+            query="What is it?",
             context="Python is a programming language.",
             system_prompt=None,
             max_tokens=1000,
