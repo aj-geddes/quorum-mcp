@@ -136,12 +136,6 @@ async def q_out(session_id: str) -> dict[str, Any]:
         # Retrieve session
         session = await _session_manager.get_session(session_id)
 
-        if session is None:
-            return {
-                "error": f"Session {session_id} not found or expired",
-                "status": "not_found",
-            }
-
         # Return session data
         return {
             "session_id": session.session_id,
@@ -155,6 +149,12 @@ async def q_out(session_id: str) -> dict[str, Any]:
             "metadata": session.metadata,
         }
 
+    except KeyError:
+        # Session not found
+        return {
+            "error": f"Session {session_id} not found",
+            "status": "not_found",
+        }
     except Exception as e:
         logger.error(f"Error in q_out: {e}", exc_info=True)
         return {

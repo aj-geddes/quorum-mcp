@@ -352,6 +352,7 @@ class SessionManager:
             status_counts[status.value] = count
 
         return {
+            "total": total,
             "total_sessions": total,
             "active_sessions": active,
             "expired_sessions": expired,
