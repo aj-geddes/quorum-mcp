@@ -60,6 +60,7 @@ from quorum_mcp.providers.base import (
     RateLimitConfig,
     RetryConfig,
 )
+from quorum_mcp.providers.gemini_provider import GeminiProvider
 from quorum_mcp.providers.openai_provider import OpenAIProvider
 
 __all__ = [
@@ -68,6 +69,7 @@ __all__ = [
     # Provider implementations
     "AnthropicProvider",
     "OpenAIProvider",
+    "GeminiProvider",
     # Data models
     "ProviderRequest",
     "ProviderResponse",

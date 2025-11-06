@@ -4,16 +4,22 @@ Multi-AI Consensus System MCP Server - Orchestrates multiple AI providers for co
 
 ## Overview
 
-Quorum-MCP is a Model Context Protocol (MCP) server that coordinates multiple AI providers (Claude, GPT-4, Gemini, Mistral) through multi-round deliberation to produce consensus-based responses. This novel approach combines the strengths of different AI models to deliver more reliable and well-rounded answers.
+Quorum-MCP is a Model Context Protocol (MCP) server that coordinates multiple AI providers through multi-round deliberation to produce consensus-based responses. This novel approach combines the strengths of different AI models to deliver more reliable and well-rounded answers.
+
+**Currently Supported Providers:**
+- 🤖 **Anthropic Claude** (claude-3-5-sonnet, claude-3-opus, claude-3-haiku)
+- 🧠 **OpenAI GPT-4** (gpt-4o, gpt-4o-mini, gpt-4-turbo)
+- ✨ **Google Gemini** (gemini-2.5-flash, gemini-2.5-pro, gemini-1.5-pro)
 
 ## Features
 
-- **Multi-Provider Orchestration**: Coordinates Claude, GPT-4, and other AI models
+- **Multi-Provider Orchestration**: Coordinates Anthropic Claude, OpenAI GPT-4, and Google Gemini
 - **Consensus-Based Responses**: Multi-round deliberation for high-quality outputs
+- **Three Operational Modes**: Quick consensus, full deliberation, devil's advocate
 - **Simple API**: Two core tools (`q_in`, `q_out`) for easy integration
-- **Cost Management**: Built-in budget controls and cost tracking
+- **Cost Management**: Built-in cost tracking across all providers
 - **Session Management**: Async query processing with session tracking
-- **Flexible Configuration**: YAML-based configuration for all parameters
+- **95%+ Test Coverage**: Comprehensive test suite with 76+ passing tests
 
 ## Installation
 
@@ -44,13 +50,18 @@ providers:
     api_key: "your-anthropic-api-key"
   openai:
     api_key: "your-openai-api-key"
+  gemini:
+    api_key: "your-google-api-key"
 ```
 
-Alternatively, use environment variables:
+Alternatively, use environment variables (recommended):
 ```bash
-export ANTHROPIC_API_KEY="your-key"
-export OPENAI_API_KEY="your-key"
+export ANTHROPIC_API_KEY="your-anthropic-key"
+export OPENAI_API_KEY="your-openai-key"
+export GOOGLE_API_KEY="your-google-key"
 ```
+
+**Note**: At least one API key is required. For best results, use all three providers to get comprehensive consensus.
 
 ## Usage
 

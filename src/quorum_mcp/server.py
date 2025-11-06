@@ -16,7 +16,7 @@ from typing import Any
 from mcp.server.fastmcp import FastMCP
 
 from quorum_mcp.orchestrator import Orchestrator
-from quorum_mcp.providers import AnthropicProvider, OpenAIProvider
+from quorum_mcp.providers import AnthropicProvider, GeminiProvider, OpenAIProvider
 from quorum_mcp.session import SessionManager, get_session_manager
 
 # Initialize FastMCP server
@@ -196,9 +196,19 @@ async def initialize_server() -> None:
         except Exception as e:
             logger.warning(f"Failed to initialize OpenAI provider: {e}")
 
+    # Try to initialize Gemini provider
+    if os.getenv("GOOGLE_API_KEY"):
+        try:
+            gemini = GeminiProvider()
+            providers.append(gemini)
+            logger.info("Gemini provider initialized")
+        except Exception as e:
+            logger.warning(f"Failed to initialize Gemini provider: {e}")
+
     if len(providers) == 0:
         logger.error(
-            "No providers initialized. Please set ANTHROPIC_API_KEY and/or OPENAI_API_KEY environment variables."
+            "No providers initialized. Please set at least one API key: "
+            "ANTHROPIC_API_KEY, OPENAI_API_KEY, or GOOGLE_API_KEY"
         )
         return
 
@@ -215,14 +225,15 @@ def main() -> None:
     making it compatible with Claude Desktop and other MCP clients.
 
     The server will:
-    1. Initialize AI provider connections (Anthropic, OpenAI)
+    1. Initialize AI provider connections (Anthropic, OpenAI, Gemini)
     2. Initialize session management
     3. Start the MCP server on stdio transport
     4. Handle incoming tool requests (q_in, q_out)
 
-    Environment Variables Required:
-    - ANTHROPIC_API_KEY: API key for Claude (optional if OpenAI is set)
-    - OPENAI_API_KEY: API key for GPT-4 (optional if Anthropic is set)
+    Environment Variables Required (at least one):
+    - ANTHROPIC_API_KEY: API key for Claude
+    - OPENAI_API_KEY: API key for GPT-4
+    - GOOGLE_API_KEY: API key for Gemini
     """
     logger.info("Starting Quorum-MCP server...")
 
