@@ -14,7 +14,7 @@ Key Design Principles:
 """
 
 from abc import ABC, abstractmethod
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 
@@ -381,7 +381,7 @@ class Provider(ABC):
         # Internal state for rate limiting
         self._request_count = 0
         self._token_count = 0
-        self._last_reset = datetime.utcnow()
+        self._last_reset = datetime.now(timezone.utc)
 
     @abstractmethod
     async def send_request(self, request: ProviderRequest) -> ProviderResponse:
@@ -494,7 +494,7 @@ class Provider(ABC):
             ProviderRateLimitError: If rate limits are exceeded
         """
         # Reset counters if a minute has passed
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         if (now - self._last_reset).total_seconds() >= 60:
             self._request_count = 0
             self._token_count = 0
