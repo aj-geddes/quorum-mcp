@@ -411,3 +411,20 @@ class OpenAIProvider(Provider):
                 "currency": "USD",
             },
         }
+
+    async def aclose(self) -> None:
+        """
+        Close the async client and release resources.
+
+        Should be called when done using the provider to properly cleanup
+        HTTP connections and other resources.
+        """
+        try:
+            await self.client.close()
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(
+                f"Error closing OpenAI client: {e}",
+                exc_info=True
+            )

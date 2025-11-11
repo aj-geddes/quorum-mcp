@@ -61,6 +61,8 @@ class OllamaProvider(Provider):
         model: str = "llama3.2",
         host: str | None = None,
         timeout: float = 120.0,
+        rate_limit_config: RateLimitConfig | None = None,
+        retry_config: RetryConfig | None = None,
     ):
         """
         Initialize Ollama provider.
@@ -69,13 +71,23 @@ class OllamaProvider(Provider):
             model: Model identifier (default: llama3.2)
             host: Ollama server host (default: http://localhost:11434)
             timeout: Request timeout in seconds (default: 120.0)
+            rate_limit_config: Rate limiting configuration
+            retry_config: Retry logic configuration
 
         Note:
             Ollama server must be running locally. Start with: ollama serve
         """
-        self.model = model
+        # Store host and timeout before initialization
         self.host = host or os.getenv("OLLAMA_HOST", "http://localhost:11434")
         self.timeout = timeout
+
+        # Initialize base class (Ollama doesn't use API keys for local inference)
+        super().__init__(
+            api_key="local",  # Placeholder for local inference
+            model=model,
+            rate_limit_config=rate_limit_config,
+            retry_config=retry_config,
+        )
 
         # Initialize async client
         try:

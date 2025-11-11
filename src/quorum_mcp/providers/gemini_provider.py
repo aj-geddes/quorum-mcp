@@ -69,6 +69,8 @@ class GeminiProvider(Provider):
         vertexai: bool = False,
         project: str | None = None,
         location: str | None = None,
+        rate_limit_config: RateLimitConfig | None = None,
+        retry_config: RetryConfig | None = None,
     ):
         """
         Initialize Gemini provider.
@@ -79,18 +81,22 @@ class GeminiProvider(Provider):
             vertexai: Use Vertex AI instead of Gemini Developer API
             project: GCP project ID (required for Vertex AI)
             location: GCP location (required for Vertex AI)
+            rate_limit_config: Rate limiting configuration
+            retry_config: Retry logic configuration
 
         Raises:
             ProviderAuthenticationError: If API key is missing
         """
-        self.api_key = api_key or os.getenv("GOOGLE_API_KEY")
-        self.model = model
+        # Get API key from parameter or environment (may be None for Vertex AI)
+        resolved_api_key = api_key or os.getenv("GOOGLE_API_KEY")
+
+        # Store vertex AI settings before validation
         self.vertexai = vertexai
         self.project = project
         self.location = location
 
         # Validate configuration
-        if not vertexai and not self.api_key:
+        if not vertexai and not resolved_api_key:
             raise ProviderAuthenticationError(
                 "GOOGLE_API_KEY environment variable not set | Provider: gemini"
             )
@@ -99,6 +105,14 @@ class GeminiProvider(Provider):
             raise ProviderAuthenticationError(
                 "Vertex AI requires project and location | Provider: gemini"
             )
+
+        # Initialize base class (use "vertex-ai" as api_key if using Vertex AI)
+        super().__init__(
+            api_key=resolved_api_key if not vertexai else "vertex-ai",
+            model=model,
+            rate_limit_config=rate_limit_config,
+            retry_config=retry_config,
+        )
 
         # Initialize client
         try:

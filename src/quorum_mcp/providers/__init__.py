@@ -60,7 +60,10 @@ from quorum_mcp.providers.base import (
     RateLimitConfig,
     RetryConfig,
 )
+from quorum_mcp.providers.cohere_provider import CohereProvider
 from quorum_mcp.providers.gemini_provider import GeminiProvider
+from quorum_mcp.providers.mistral_provider import MistralProvider
+from quorum_mcp.providers.novita_provider import NovitaProvider
 from quorum_mcp.providers.ollama_provider import OllamaProvider
 from quorum_mcp.providers.openai_provider import OpenAIProvider
 
@@ -72,6 +75,9 @@ __all__ = [
     "OpenAIProvider",
     "GeminiProvider",
     "OllamaProvider",
+    "CohereProvider",
+    "MistralProvider",
+    "NovitaProvider",
     # Data models
     "ProviderRequest",
     "ProviderResponse",
