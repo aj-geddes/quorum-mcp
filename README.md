@@ -9,7 +9,7 @@
 
 ## 🎯 Overview
 
-Quorum-MCP orchestrates multiple AI providers (Anthropic Claude, OpenAI, Google Gemini, Ollama) through multi-round deliberation to produce consensus-based responses. By combining different AI models, you get more balanced, comprehensive, and reliable answers.
+Quorum-MCP orchestrates multiple AI providers (Anthropic Claude, OpenAI, Google Gemini, Cohere, Mistral AI, Novita AI, Ollama) through multi-round deliberation to produce consensus-based responses. By combining different AI models, you get more balanced, comprehensive, and reliable answers.
 
 **Why Quorum?**
 - 🎭 **Diverse Perspectives**: Each AI has unique strengths and biases
@@ -19,7 +19,7 @@ Quorum-MCP orchestrates multiple AI providers (Anthropic Claude, OpenAI, Google 
 
 ## ✨ Features
 
-### Multi-Provider Support
+### Multi-Provider Support (7 Providers!)
 - 🤖 **Anthropic Claude** - Thoughtful, nuanced reasoning
   - Models: `claude-3-5-sonnet-20241022` (default), `claude-3-opus`, `claude-3-haiku`
   - Context: 200K tokens | Cost: $3-$15/1M input
@@ -29,6 +29,18 @@ Quorum-MCP orchestrates multiple AI providers (Anthropic Claude, OpenAI, Google 
 - ✨ **Google Gemini** - Fast, cost-effective, huge context
   - Models: `gemini-2.5-flash` (default), `gemini-2.5-pro`, `gemini-1.5-pro`
   - Context: Up to **2M tokens** | Cost: $0.15-$1.25/1M input
+- 🏢 **Cohere** - Enterprise RAG, production-ready
+  - Models: `command-r-plus` (default), `command-r`, `command-light`
+  - Context: 128K tokens | Cost: $0.30-$15/1M input
+  - Features: Excellent RAG capabilities, free tier available
+- 🇪🇺 **Mistral AI** - Best pricing, European AI
+  - Models: `mistral-large-latest` (default), `mistral-small-latest`, `mixtral-8x22b`
+  - Context: 128K tokens | Cost: $0.04-$6/1M input
+  - Features: GDPR compliant, competitive with GPT-4
+- ⚡ **Novita AI** - Ultra-low cost, OpenAI-compatible
+  - Models: `llama-3.3-70b` (default), `deepseek-r1`, `qwen-2.5-72b`
+  - Context: 128K tokens | Cost: **$0.04-$0.20/1M input** (cheapest!)
+  - Features: OpenAI-compatible API, multiple open-source models
 - 🏠 **Ollama (Local LLMs)** - Private, zero-cost local inference
   - Models: `llama3.2` (default), `llama3.1`, `mistral`, `mixtral`, `qwen3`, `deepseek-r1`, `gemma3`
   - Context: Up to 128K tokens | Cost: **$0.00** (100% local)
@@ -95,12 +107,18 @@ pip install -e ".[dev]"
 
 #### Cloud Providers (Optional)
 
-Set your API keys as environment variables:
+Set your API keys as environment variables (use whichever providers you prefer):
 
 ```bash
+# Traditional providers
 export ANTHROPIC_API_KEY="sk-ant-..."
 export OPENAI_API_KEY="sk-..."
 export GOOGLE_API_KEY="..."
+
+# New providers (optional - mix and match!)
+export COHERE_API_KEY="..."
+export MISTRAL_API_KEY="..."
+export NOVITA_API_KEY="..."
 ```
 
 #### Local LLMs with Ollama (Optional, Zero Cost)
@@ -139,15 +157,27 @@ python -m quorum_mcp.server
 ```python
 import asyncio
 from quorum_mcp.orchestrator import Orchestrator
-from quorum_mcp.providers import AnthropicProvider, OpenAIProvider, GeminiProvider
+from quorum_mcp.providers import (
+    AnthropicProvider,
+    OpenAIProvider,
+    GeminiProvider,
+    CohereProvider,     # New!
+    MistralProvider,    # New!
+    NovitaProvider,     # New!
+    OllamaProvider,     # Local
+)
 from quorum_mcp.session import get_session_manager
 
 async def main():
-    # Initialize providers
+    # Initialize providers (use any combination!)
     providers = [
         AnthropicProvider(),
         OpenAIProvider(),
-        GeminiProvider()
+        GeminiProvider(),
+        # Add new providers for more perspectives:
+        CohereProvider(),   # Enterprise RAG
+        MistralProvider(),  # Best pricing
+        NovitaProvider(),   # Ultra-low cost
     ]
 
     # Start session manager
