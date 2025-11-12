@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quorum-MCP Dashboard</title>
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <h1>🤖 Quorum-MCP</h1>
+                    <span class="tagline">Multi-AI Consensus Building</span>
+                </div>
+                <nav class="nav">
+                    <button class="nav-btn active" data-tab="query">Query</button>
+                    <button class="nav-btn" data-tab="sessions">Sessions</button>
+                    <button class="nav-btn" data-tab="calculator">Cost Calculator</button>
+                    <button class="nav-btn" data-tab="providers">Providers</button>
+                </nav>
+                <div class="status">
+                    <span id="connection-status" class="status-badge">●</span>
+                    <span id="provider-count">0 Providers</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Query Tab -->
+        <div id="query-tab" class="tab-content active">
+            <div class="section">
+                <h2>Submit Consensus Query</h2>
+                <p class="section-subtitle">Get AI consensus from multiple providers</p>
+
+                <form id="query-form" class="query-form">
+                    <div class="form-group">
+                        <label for="query">Your Query*</label>
+                        <textarea
+                            id="query"
+                            name="query"
+                            rows="4"
+                            placeholder="What question would you like multiple AIs to answer?"
+                            required
+                        ></textarea>
+                        <span class="helper-text">Be specific for better consensus</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="context">Context (Optional)</label>
+                        <textarea
+                            id="context"
+                            name="context"
+                            rows="3"
+                            placeholder="Provide additional context or constraints..."
+                        ></textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="mode">Mode</label>
+                            <select id="mode" name="mode">
+                                <option value="quick_consensus">⚡ Quick Consensus (1 round)</option>
+                                <option value="full_deliberation">🔄 Full Deliberation (3 rounds)</option>
+                                <option value="devils_advocate">😈 Devil's Advocate</option>
+                            </select>
+                            <span class="helper-text" id="mode-description">
+                                Fast consensus from all providers simultaneously
+                            </span>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Providers</label>
+                            <div id="provider-checkboxes" class="checkbox-group">
+                                <div class="loading">Loading providers...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary" id="submit-btn">
+                            <span>Build Consensus</span>
+                        </button>
+                        <button type="button" class="btn btn-secondary" id="clear-btn">Clear</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Results Section -->
+            <div id="results-section" class="section" style="display: none;">
+                <div class="results-header">
+                    <h2>Consensus Results</h2>
+                    <button class="btn btn-sm" id="export-btn">📥 Export</button>
+                </div>
+
+                <div id="results-loading" class="loading-state">
+                    <div class="spinner"></div>
+                    <p>Building consensus across providers...</p>
+                    <p class="loading-details" id="loading-details"></p>
+                </div>
+
+                <div id="results-content" style="display: none;">
+                    <!-- Session Info -->
+                    <div class="info-box">
+                        <div class="info-item">
+                            <span class="label">Session ID:</span>
+                            <code id="session-id"></code>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">Status:</span>
+                            <span class="badge" id="session-status"></span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">Cost:</span>
+                            <span id="session-cost">$0.00</span>
+                        </div>
+                    </div>
+
+                    <!-- Consensus Summary -->
+                    <div class="consensus-box">
+                        <h3>📊 Consensus Summary</h3>
+                        <div id="consensus-content">
+                            <div class="consensus-score">
+                                <span class="score-label">Confidence:</span>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" id="confidence-bar"></div>
+                                </div>
+                                <span id="confidence-score">0%</span>
+                            </div>
+                            <div class="consensus-text" id="consensus-text"></div>
+                        </div>
+                    </div>
+
+                    <!-- Provider Responses -->
+                    <div class="provider-responses">
+                        <h3>🤖 Provider Responses</h3>
+                        <div id="provider-responses-list"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sessions Tab -->
+        <div id="sessions-tab" class="tab-content">
+            <div class="section">
+                <div class="section-header">
+                    <h2>Recent Sessions</h2>
+                    <button class="btn btn-sm" id="refresh-sessions">🔄 Refresh</button>
+                </div>
+
+                <div class="filters">
+                    <select id="status-filter">
+                        <option value="">All Statuses</option>
+                        <option value="completed">Completed</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="failed">Failed</option>
+                    </select>
+                </div>
+
+                <div id="sessions-list" class="sessions-list">
+                    <div class="loading">Loading sessions...</div>
+                </div>
+
+                <div class="pagination" id="sessions-pagination">
+                    <button class="btn btn-sm" id="prev-page">← Previous</button>
+                    <span id="page-info">Page 1</span>
+                    <button class="btn btn-sm" id="next-page">Next →</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cost Calculator Tab -->
+        <div id="calculator-tab" class="tab-content">
+            <div class="section">
+                <h2>💰 Cost Calculator</h2>
+                <p class="section-subtitle">Estimate your monthly costs</p>
+
+                <form id="calculator-form" class="calculator-form">
+                    <div class="form-group">
+                        <label for="queries-per-month">Queries per Month</label>
+                        <input
+                            type="number"
+                            id="queries-per-month"
+                            value="1000"
+                            min="1"
+                            max="10000000"
+                        >
+                        <input
+                            type="range"
+                            id="queries-slider"
+                            value="1000"
+                            min="10"
+                            max="100000"
+                            step="10"
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="query-length">Average Query Length (characters)</label>
+                        <input
+                            type="number"
+                            id="query-length"
+                            value="500"
+                            min="10"
+                            max="50000"
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label>Select Providers</label>
+                        <div id="cost-provider-checkboxes" class="checkbox-group">
+                            <!-- Dynamically populated -->
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="cost-mode">Mode</label>
+                        <select id="cost-mode">
+                            <option value="quick_consensus">Quick Consensus (1x cost)</option>
+                            <option value="full_deliberation">Full Deliberation (3x cost)</option>
+                        </select>
+                    </div>
+
+                    <button type="button" class="btn btn-primary" id="calculate-cost">
+                        Calculate Cost
+                    </button>
+                </form>
+
+                <div id="cost-results" class="cost-results" style="display: none;">
+                    <h3>📈 Cost Estimate</h3>
+
+                    <div class="cost-summary">
+                        <div class="cost-item">
+                            <span class="cost-label">Per Query:</span>
+                            <span class="cost-value" id="cost-per-query">$0.0000</span>
+                        </div>
+                        <div class="cost-item highlight">
+                            <span class="cost-label">Monthly Total:</span>
+                            <span class="cost-value" id="cost-monthly">$0.00</span>
+                        </div>
+                    </div>
+
+                    <div class="cost-breakdown">
+                        <h4>Breakdown by Provider</h4>
+                        <div id="cost-by-provider"></div>
+                    </div>
+
+                    <div class="cost-assumptions">
+                        <h4>Assumptions</h4>
+                        <ul id="cost-assumptions-list"></ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Providers Tab -->
+        <div id="providers-tab" class="tab-content">
+            <div class="section">
+                <h2>🔌 Available Providers</h2>
+                <p class="section-subtitle">Status and information for all AI providers</p>
+
+                <div id="providers-list" class="providers-grid">
+                    <div class="loading">Loading providers...</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>Quorum-MCP v1.0.0 |
+                <a href="/api/docs" target="_blank">API Docs</a> |
+                <a href="https://github.com/aj-geddes/quorum-mcp" target="_blank">GitHub</a>
+            </p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="/static/js/dashboard.js"></script>
+</body>
+</html>

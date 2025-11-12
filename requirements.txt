@@ -11,6 +11,11 @@ openai>=1.54.0
 cohere>=5.11.0
 mistralai>=1.2.0
 
+# Web Server
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+websockets>=13.0
+
 # Data validation and serialization
 pydantic>=2.9.0
 
