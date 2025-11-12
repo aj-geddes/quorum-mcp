@@ -1,0 +1,25 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: quorum-mcp-config
+  namespace: quorum-mcp
+  labels:
+    app: quorum-mcp
+data:
+  # Ollama settings (for local LLM support)
+  OLLAMA_HOST: "http://ollama.ollama.svc.cluster.local:11434"
+  OLLAMA_ENABLE: "true"
+
+  # Application settings
+  LOG_LEVEL: "INFO"
+  SESSION_TIMEOUT_HOURS: "24"
+  MAX_CONCURRENT_REQUESTS: "10"
+
+  # Rate limiting defaults (per provider)
+  DEFAULT_REQUESTS_PER_MINUTE: "60"
+  DEFAULT_TOKENS_PER_MINUTE: "100000"
+
+  # Budget defaults
+  DEFAULT_BUDGET_LIMIT: "10.00"
+  DEFAULT_BUDGET_PERIOD: "daily"

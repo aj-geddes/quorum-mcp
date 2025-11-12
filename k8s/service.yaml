@@ -1,0 +1,26 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: quorum-mcp
+  namespace: quorum-mcp
+  labels:
+    app: quorum-mcp
+    version: v1
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8000
+    protocol: TCP
+  - name: websocket
+    port: 8000
+    targetPort: 8000
+    protocol: TCP
+  selector:
+    app: quorum-mcp
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 3600

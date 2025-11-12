@@ -16,9 +16,14 @@ Key Design Principles:
 from abc import ABC, abstractmethod
 from datetime import datetime
 from enum import Enum
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict, Field
+
+if TYPE_CHECKING:
+    from quorum_mcp.rate_limiter import ProviderRateLimiter
+    from quorum_mcp.budget import BudgetManager
+    from quorum_mcp.benchmark import BenchmarkTracker
 
 
 class ProviderType(str, Enum):
@@ -411,6 +416,9 @@ class Provider(ABC):
         model: str,
         rate_limit_config: RateLimitConfig | None = None,
         retry_config: RetryConfig | None = None,
+        rate_limiter: "ProviderRateLimiter | None" = None,
+        budget_manager: "BudgetManager | None" = None,
+        benchmark_tracker: "BenchmarkTracker | None" = None,
     ):
         """
         Initialize a provider.
@@ -418,15 +426,23 @@ class Provider(ABC):
         Args:
             api_key: API key for authenticating with the provider
             model: Default model to use for this provider
-            rate_limit_config: Configuration for rate limiting
+            rate_limit_config: Configuration for rate limiting (deprecated, use rate_limiter)
             retry_config: Configuration for retry logic
+            rate_limiter: Rate limiter instance for this provider
+            budget_manager: Budget manager for cost tracking
+            benchmark_tracker: Benchmark tracker for performance metrics
         """
         self.api_key = api_key
         self.model = model
         self.rate_limit_config = rate_limit_config or RateLimitConfig()
         self.retry_config = retry_config or RetryConfig()
 
-        # Internal state for rate limiting
+        # Advanced system integrations
+        self.rate_limiter = rate_limiter
+        self.budget_manager = budget_manager
+        self.benchmark_tracker = benchmark_tracker
+
+        # Internal state for rate limiting (legacy, for backwards compatibility)
         self._request_count = 0
         self._token_count = 0
         self._last_reset = datetime.utcnow()
@@ -531,16 +547,32 @@ class Provider(ABC):
                 provider=self.get_provider_name(),
             )
 
-    async def check_rate_limits(self) -> None:
+    async def check_rate_limits(self, estimated_tokens: int = 0) -> None:
         """
         Check if rate limits allow making another request.
 
-        This is a hook for implementing rate limiting logic. Subclasses can
-        override this to implement provider-specific rate limiting.
+        This is a hook for implementing rate limiting logic. Uses the new
+        rate limiter system if available, falls back to legacy implementation.
+
+        Args:
+            estimated_tokens: Estimated tokens for the request (for token-based rate limiting)
 
         Raises:
             ProviderRateLimitError: If rate limits are exceeded
         """
+        # Use new rate limiter system if available
+        if self.rate_limiter is not None:
+            try:
+                await self.rate_limiter.acquire(tokens=estimated_tokens)
+            except Exception as e:
+                raise ProviderRateLimitError(
+                    str(e),
+                    provider=self.get_provider_name(),
+                    retry_after=60.0,
+                )
+            return
+
+        # Legacy rate limiting (for backwards compatibility)
         # Reset counters if a minute has passed
         now = datetime.utcnow()
         if (now - self._last_reset).total_seconds() >= 60:
@@ -558,6 +590,93 @@ class Provider(ABC):
                 )
 
         self._request_count += 1
+
+    async def check_budget(self, estimated_cost: float) -> None:
+        """
+        Check if budget allows making another request.
+
+        Args:
+            estimated_cost: Estimated cost of the request in USD
+
+        Raises:
+            ProviderQuotaExceededError: If budget is exceeded
+        """
+        if self.budget_manager is None:
+            return
+
+        provider_name = self.get_provider_name()
+        allowed, reason = await self.budget_manager.check_budget(provider_name, estimated_cost)
+
+        if not allowed:
+            raise ProviderQuotaExceededError(
+                reason or "Budget exceeded",
+                provider=provider_name,
+            )
+
+    async def record_cost(
+        self,
+        cost: float,
+        tokens_input: int,
+        tokens_output: int,
+        model: str | None = None,
+    ) -> None:
+        """
+        Record the cost of a request for budget tracking.
+
+        Args:
+            cost: Actual cost of the request in USD
+            tokens_input: Number of input tokens
+            tokens_output: Number of output tokens
+            model: Model name (defaults to self.model)
+        """
+        if self.budget_manager is None:
+            return
+
+        provider_name = self.get_provider_name()
+        await self.budget_manager.record_cost(
+            provider=provider_name,
+            cost=cost,
+            tokens_input=tokens_input,
+            tokens_output=tokens_output,
+            model=model or self.model,
+        )
+
+    async def record_benchmark(
+        self,
+        latency: float,
+        tokens_input: int,
+        tokens_output: int,
+        cost: float,
+        success: bool,
+        error_type: str | None = None,
+        model: str | None = None,
+    ) -> None:
+        """
+        Record performance benchmarking data for this request.
+
+        Args:
+            latency: Request latency in seconds
+            tokens_input: Number of input tokens
+            tokens_output: Number of output tokens
+            cost: Cost of the request in USD
+            success: Whether the request succeeded
+            error_type: Type of error if request failed
+            model: Model name (defaults to self.model)
+        """
+        if self.benchmark_tracker is None:
+            return
+
+        provider_name = self.get_provider_name()
+        await self.benchmark_tracker.record_request(
+            provider=provider_name,
+            model=model or self.model,
+            latency=latency,
+            tokens_input=tokens_input,
+            tokens_output=tokens_output,
+            cost=cost,
+            success=success,
+            error_type=error_type,
+        )
 
     async def handle_retry(
         self,
