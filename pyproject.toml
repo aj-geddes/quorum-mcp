@@ -31,6 +31,9 @@ dependencies = [
     "ollama>=0.4.0",
     "cohere>=5.11.0",
     "mistralai>=1.2.0",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "websockets>=13.0",
     "pydantic>=2.9.0",
     "pyyaml>=6.0.0",
     "aiohttp>=3.10.0",
@@ -51,6 +54,7 @@ dev = [
 
 [project.scripts]
 quorum-mcp = "quorum_mcp.server:main"
+quorum-web = "quorum_mcp.web_server:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

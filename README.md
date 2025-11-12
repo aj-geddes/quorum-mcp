@@ -79,13 +79,16 @@ session = await orchestrator.execute_quorum(
 ```
 
 ### Additional Features
+- 🌐 **Web Dashboard**: Interactive browser-based UI (NEW!)
 - ⚡ **Async/Await**: Non-blocking I/O throughout
 - 💰 **Cost Tracking**: Per-provider and total cost reporting (including $0 for local)
+- 📊 **Cost Calculator**: Estimate costs before running queries (NEW!)
 - 🏠 **Local LLMs**: Zero-cost inference with Ollama (100% private)
-- 📊 **Session Management**: Persistent session storage and retrieval
+- 📝 **Session Management**: Persistent session storage and retrieval
 - 🔒 **Type Safe**: Full Pydantic validation
 - 🧪 **Well Tested**: 105 passing tests, 95% provider coverage
-- 📝 **MCP Integration**: Works with Claude Desktop and other MCP clients
+- 📡 **MCP Integration**: Works with Claude Desktop and other MCP clients
+- 🔄 **Real-Time Updates**: WebSocket-powered live notifications (NEW!)
 
 ## 🚀 Quick Start
 
@@ -143,6 +146,33 @@ export OLLAMA_ENABLE="true"  # Set to "false" to disable
 **Note**: At least one provider (cloud or local) is required. Ollama enables zero-cost consensus!
 
 ### Running the Server
+
+#### Option 1: Web Dashboard (Recommended for Getting Started)
+
+Launch the interactive web interface:
+
+```bash
+# Start the web server
+quorum-web
+
+# Or run directly
+python -m quorum_mcp.web_server
+```
+
+Then open `http://localhost:8000` in your browser. No coding required!
+
+**Features:**
+- 🎨 Interactive query builder
+- 📊 Real-time consensus visualization
+- 💰 Cost calculator and estimator
+- 📈 Session history and analytics
+- 🔍 Provider comparison tools
+
+[📖 Read the Web Dashboard Guide](docs/quickstart/WEB_DASHBOARD.md)
+
+#### Option 2: MCP Server (for Claude Desktop Integration)
+
+For programmatic use or Claude Desktop integration:
 
 ```bash
 # Start the MCP server
