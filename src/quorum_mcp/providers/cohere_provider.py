@@ -1,22 +1,22 @@
 """
-Mistral AI Provider for Quorum-MCP
+Cohere Provider for Quorum-MCP
 
-This module implements the Mistral AI provider, supporting high-performance LLM inference
-with the best pricing in the market and excellent quality-to-cost ratio.
+This module implements the Cohere provider, supporting enterprise-grade LLM inference
+with excellent RAG (Retrieval-Augmented Generation) capabilities and competitive pricing.
 
 Key Features:
-- Best-in-class pricing ($0.27-2.70 per million tokens)
-- Strong performance competitive with GPT-4 and Claude
-- European AI sovereignty (GDPR compliant)
-- Multiple model sizes (7B to Mixtral 8x22B)
-- OpenAI-compatible API for easy migration
+- Enterprise focus with production-ready reliability
+- Excellent RAG capabilities with retrieval-optimized models
+- Competitive pricing ($0.15-3.00 per million tokens)
+- Command R and Command R+ models for enhanced reasoning
+- Free tier available for prototyping
 """
 
 import logging
 import os
 from datetime import datetime, timezone
 
-from mistralai import Mistral
+import cohere
 
 from quorum_mcp.providers.base import (
     Provider,
@@ -37,51 +37,40 @@ from quorum_mcp.providers.base import (
 logger = logging.getLogger(__name__)
 
 
-class MistralProvider(Provider):
+class CohereProvider(Provider):
     """
-    Provider implementation for Mistral AI.
+    Provider implementation for Cohere.
 
-    Mistral AI offers best-in-class pricing with strong performance,
-    making it ideal for cost-sensitive deployments and European customers.
+    Cohere offers enterprise-grade LLMs with excellent RAG capabilities,
+    competitive pricing, and production-ready reliability.
     """
 
-    DEFAULT_MODEL = "mistral-large-latest"
+    DEFAULT_MODEL = "command-r-plus"
 
-    # Model pricing (per million tokens) - Based on Mistral AI's 2025 pricing
+    # Model pricing (per million tokens) - Based on Cohere's 2025 pricing
     MODEL_PRICING = {
-        # Large models (Most capable)
-        "mistral-large-latest": {"input": 2.00, "output": 6.00},
-        "mistral-large-2411": {"input": 2.00, "output": 6.00},
-        # Medium models (Balanced)
-        "mistral-medium-latest": {"input": 2.70, "output": 8.10},
-        # Small models (Fast and economical)
-        "mistral-small-latest": {"input": 0.20, "output": 0.60},
-        "mistral-small-2412": {"input": 0.20, "output": 0.60},
-        # Mixtral models (Open-weight)
-        "open-mixtral-8x22b": {"input": 2.00, "output": 6.00},
-        "open-mixtral-8x7b": {"input": 0.70, "output": 0.70},
-        # Ministral models (Edge optimized)
-        "ministral-8b-latest": {"input": 0.10, "output": 0.10},
-        "ministral-3b-latest": {"input": 0.04, "output": 0.04},
-        # Codestral (Code-specialized)
-        "codestral-latest": {"input": 0.20, "output": 0.60},
+        # Command R+ (Most capable)
+        "command-r-plus": {"input": 3.00, "output": 15.00},
+        # Command R (Optimized balance)
+        "command-r": {"input": 0.50, "output": 1.50},
+        # Command (Legacy)
+        "command": {"input": 1.00, "output": 2.00},
+        # Command Light (Fast, economical)
+        "command-light": {"input": 0.30, "output": 0.60},
+        # Command Nightly (Latest experimental)
+        "command-nightly": {"input": 1.00, "output": 2.00},
         # Default for unknown models
-        "default": {"input": 1.00, "output": 3.00},
+        "default": {"input": 1.00, "output": 2.00},
     }
 
     # Context windows for models
     MODEL_CONTEXT_WINDOWS = {
-        "mistral-large-latest": 128000,
-        "mistral-large-2411": 128000,
-        "mistral-medium-latest": 32000,
-        "mistral-small-latest": 32000,
-        "mistral-small-2412": 32000,
-        "open-mixtral-8x22b": 64000,
-        "open-mixtral-8x7b": 32000,
-        "ministral-8b-latest": 128000,
-        "ministral-3b-latest": 128000,
-        "codestral-latest": 32000,
-        "default": 32000,
+        "command-r-plus": 128000,
+        "command-r": 128000,
+        "command": 4096,
+        "command-light": 4096,
+        "command-nightly": 128000,
+        "default": 4096,
     }
 
     def __init__(
@@ -92,11 +81,11 @@ class MistralProvider(Provider):
         retry_config: RetryConfig | None = None,
     ):
         """
-        Initialize Mistral AI provider.
+        Initialize Cohere provider.
 
         Args:
-            api_key: Mistral AI API key (or from MISTRAL_API_KEY env var)
-            model: Model identifier (default: mistral-large-latest)
+            api_key: Cohere API key (or from COHERE_API_KEY env var)
+            model: Model identifier (default: command-r-plus)
             rate_limit_config: Rate limiting configuration
             retry_config: Retry logic configuration
 
@@ -105,11 +94,11 @@ class MistralProvider(Provider):
         """
         # Get API key from parameter or environment
         if api_key is None:
-            api_key = os.environ.get("MISTRAL_API_KEY")
+            api_key = os.environ.get("COHERE_API_KEY")
             if not api_key:
                 raise ProviderAuthenticationError(
-                    "MISTRAL_API_KEY environment variable not set",
-                    provider="mistral",
+                    "COHERE_API_KEY environment variable not set",
+                    provider="cohere",
                 )
 
         # Use default model if not specified
@@ -124,17 +113,17 @@ class MistralProvider(Provider):
             retry_config=retry_config,
         )
 
-        # Initialize Mistral client
-        self.client = Mistral(api_key=api_key)
+        # Initialize Cohere client
+        self.client = cohere.AsyncClientV2(api_key=api_key)
 
     async def send_request(self, request: ProviderRequest) -> ProviderResponse:
         """
-        Send a request to Mistral AI and return the response.
+        Send a request to Cohere and return the response.
 
         This method handles:
         - Request validation
         - Rate limiting checks
-        - Request formatting for Mistral AI API
+        - Request formatting for Cohere API
         - API call with retry logic
         - Response parsing and token counting
         - Error mapping to Provider exceptions
@@ -158,7 +147,7 @@ class MistralProvider(Provider):
             # Build messages for chat API
             messages = []
 
-            # Add system prompt if provided
+            # Add system message if provided
             if request.system_prompt:
                 messages.append({
                     "role": "system",
@@ -178,38 +167,47 @@ class MistralProvider(Provider):
             # Start timing
             start_time = datetime.now(timezone.utc)
 
-            # Make API call using Mistral's async method
-            response = await self.client.chat.complete_async(
+            # Make API call
+            response = await self.client.chat(
                 model=model,
                 messages=messages,
                 max_tokens=request.max_tokens or 4096,
                 temperature=request.temperature,
-                top_p=request.top_p,
+                p=request.top_p,  # Cohere uses 'p' instead of 'top_p'
             )
 
             # Calculate latency
             latency = (datetime.now(timezone.utc) - start_time).total_seconds()
 
             # Extract response content
-            if not response.choices or len(response.choices) == 0:
+            if not response.message or not response.message.content:
                 raise ProviderError(
-                    "No choices returned in response",
-                    provider="mistral",
+                    "No content returned in response",
+                    provider="cohere",
                 )
 
-            content = response.choices[0].message.content or ""
+            # Get content from response
+            content_blocks = response.message.content
+            if isinstance(content_blocks, list):
+                # Extract text from content blocks
+                content = " ".join([
+                    block.text for block in content_blocks
+                    if hasattr(block, 'text')
+                ])
+            else:
+                content = str(content_blocks)
 
             # Get token counts from response
-            tokens_input = response.usage.prompt_tokens if response.usage else 0
-            tokens_output = response.usage.completion_tokens if response.usage else 0
+            tokens_input = response.usage.tokens.input_tokens if response.usage else 0
+            tokens_output = response.usage.tokens.output_tokens if response.usage else 0
 
             # Calculate cost
             cost = self.get_cost(tokens_input, tokens_output)
 
             # Build metadata
             metadata = {
-                "finish_reason": response.choices[0].finish_reason,
-                "model": response.model,
+                "finish_reason": response.finish_reason,
+                "model": model,
                 "response_id": response.id,
             }
 
@@ -226,81 +224,90 @@ class MistralProvider(Provider):
                 metadata=metadata,
             )
 
-        except Exception as e:
-            # Map Mistral AI exceptions to Provider exceptions
+        except cohere.core.ApiError as e:
+            # Map Cohere API errors to Provider exceptions
             error_message = str(e).lower()
+            status_code = getattr(e, 'status_code', 0)
 
-            # Try to get status code if available
-            status_code = 0
-            if hasattr(e, 'status_code'):
-                status_code = e.status_code
-            elif hasattr(e, 'http_status'):
-                status_code = e.http_status
-
-            if status_code == 401 or "authentication" in error_message or "api key" in error_message or "unauthorized" in error_message:
+            if status_code == 401 or "authentication" in error_message or "api key" in error_message:
                 raise ProviderAuthenticationError(
                     f"Authentication failed: {e}",
-                    provider="mistral",
+                    provider="cohere",
                 ) from e
 
             if status_code == 429 or "rate limit" in error_message or "too many requests" in error_message:
                 raise ProviderRateLimitError(
                     f"Rate limit exceeded: {e}",
-                    provider="mistral",
+                    provider="cohere",
                 ) from e
 
-            if "timeout" in error_message or "timed out" in error_message:
+            if status_code == 408 or "timeout" in error_message or "timed out" in error_message:
                 raise ProviderTimeoutError(
                     f"Request timeout: {e}",
-                    provider="mistral",
+                    provider="cohere",
                 ) from e
 
             if "model" in error_message and ("not found" in error_message or "unavailable" in error_message):
                 raise ProviderModelError(
                     f"Model not found or not available: {e}",
-                    provider="mistral",
+                    provider="cohere",
                 ) from e
 
             if "quota" in error_message or "insufficient" in error_message:
                 raise ProviderQuotaExceededError(
                     f"Quota exceeded: {e}",
-                    provider="mistral",
+                    provider="cohere",
                 ) from e
 
-            if status_code == 400 or "invalid" in error_message or "bad request" in error_message:
+            if status_code == 400 or "invalid" in error_message:
                 raise ProviderInvalidRequestError(
                     f"Invalid request: {e}",
-                    provider="mistral",
+                    provider="cohere",
                 ) from e
+
+            # Generic API error
+            raise ProviderError(
+                f"Cohere API error: {e}",
+                provider="cohere",
+            ) from e
+
+        except Exception as e:
+            # Handle connection and other errors
+            error_message = str(e).lower()
 
             if "connection" in error_message or "network" in error_message:
                 raise ProviderConnectionError(
                     f"Connection error: {e}",
-                    provider="mistral",
+                    provider="cohere",
                 ) from e
 
             # Generic error for anything else
             raise ProviderError(
-                f"Mistral AI request failed: {e}",
-                provider="mistral",
+                f"Cohere request failed: {e}",
+                provider="cohere",
             ) from e
 
     async def count_tokens(self, text: str) -> int:
         """
-        Count tokens in text.
-
-        Mistral AI doesn't provide a tokenize API, so we use estimation
-        based on typical token-to-character ratios.
+        Count tokens in text using Cohere's tokenize API.
 
         Args:
             text: Text to count tokens for
 
         Returns:
-            Number of tokens in the text (estimated)
+            Number of tokens in the text
         """
-        # Mistral models use similar tokenization to GPT models
-        # Estimate ~4 chars per token as a reasonable approximation
-        return len(text) // 4
+        try:
+            # Use Cohere's tokenize endpoint for accurate counting
+            response = await self.client.tokenize(
+                text=text,
+                model=self.model,
+            )
+            return len(response.tokens) if response.tokens else 0
+        except Exception as e:
+            logger.warning(f"Token counting failed, using estimation: {e}")
+            # Fallback: estimate ~4 chars per token
+            return len(text) // 4
 
     def get_cost(self, tokens_input: int, tokens_output: int) -> float:
         """
@@ -329,7 +336,7 @@ class MistralProvider(Provider):
         Returns:
             Provider identifier string
         """
-        return "mistral"
+        return "cohere"
 
     def get_model_info(self) -> dict:
         """
@@ -346,7 +353,7 @@ class MistralProvider(Provider):
 
         return {
             "name": self.model,
-            "provider": "mistral",
+            "provider": "cohere",
             "context_window": context_window,
             "pricing": {
                 "input_per_1m": pricing["input"],
@@ -354,9 +361,9 @@ class MistralProvider(Provider):
                 "currency": "USD",
             },
             "features": {
-                "best_pricing": True,
-                "european_ai": True,
-                "gdpr_compliant": True,
+                "rag_optimized": True,
+                "enterprise_ready": True,
+                "free_tier": True,
             },
         }
 
@@ -368,27 +375,22 @@ class MistralProvider(Provider):
         HTTP connections and other resources.
         """
         try:
-            # Mistral client may not have explicit close method
-            # Check if it has one and call it
-            if hasattr(self.client, 'close'):
-                await self.client.close()
-            elif hasattr(self.client, 'aclose'):
-                await self.client.aclose()
+            await self.client.close()
         except Exception as e:
             logger.warning(
-                f"Error closing Mistral AI client: {e}",
+                f"Error closing Cohere client: {e}",
                 exc_info=True
             )
 
     @staticmethod
     def list_available_models() -> list[str]:
         """
-        List available Mistral AI models.
+        List available Cohere models.
 
         Returns:
             List of model identifiers
         """
         return [
-            model for model in MistralProvider.MODEL_PRICING.keys()
+            model for model in CohereProvider.MODEL_PRICING.keys()
             if model != "default"
         ]

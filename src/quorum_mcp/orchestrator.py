@@ -24,7 +24,7 @@ Operational Modes:
 import asyncio
 import logging
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from quorum_mcp.providers.base import (
@@ -258,7 +258,7 @@ class Orchestrator:
             # Update session metadata
             session = await self.session_manager.get_session(session.session_id)
             session.metadata["total_time"] = total_time
-            session.metadata["end_time"] = datetime.utcnow().isoformat()
+            session.metadata["end_time"] = datetime.now(timezone.utc).isoformat()
 
             # Set consensus and mark complete
             session.set_consensus(consensus)
@@ -579,7 +579,7 @@ class Orchestrator:
                 session.add_provider_response(
                     provider=provider_name,
                     round_num=round_num,
-                    response={"error": str(response), "timestamp": datetime.utcnow().isoformat()},
+                    response={"error": str(response), "timestamp": datetime.now(timezone.utc).isoformat()},
                 )
                 await self.session_manager.update_session(
                     session_id, {"provider_responses": session.provider_responses}

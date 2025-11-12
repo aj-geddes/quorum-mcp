@@ -8,7 +8,7 @@ entire quorum consensus process.
 
 import asyncio
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Any
 from uuid import uuid4
@@ -74,7 +74,7 @@ class Session(BaseModel):
 
     def update_timestamp(self) -> None:
         """Update the updated_at timestamp"""
-        self.updated_at = datetime.utcnow()
+        self.updated_at = datetime.now(timezone.utc)
 
     def add_provider_response(self, provider: str, round_num: int, response: Any) -> None:
         """
@@ -123,7 +123,7 @@ class Session(BaseModel):
             True if session has exceeded TTL
         """
         expiration_time = self.created_at + timedelta(hours=ttl_hours)
-        return datetime.utcnow() > expiration_time
+        return datetime.now(timezone.utc) > expiration_time
 
 
 class SessionManager:
@@ -272,8 +272,21 @@ class SessionManager:
                 logger.warning(f"Cannot update expired session: {session_id}")
                 raise KeyError(f"Session expired: {session_id}")
 
-            # Apply updates
+            # Define allowed fields that can be updated
+            # Security: Only allow updating specific fields, not sensitive ones like session_id
+            ALLOWED_UPDATE_FIELDS = {
+                'status', 'provider_responses', 'consensus',
+                'metadata', 'error'
+            }
+
+            # Apply updates with allowlist validation
             for field, value in updates.items():
+                if field not in ALLOWED_UPDATE_FIELDS:
+                    logger.error(f"Unauthorized field update attempted: {field}")
+                    raise ValueError(
+                        f"Field '{field}' cannot be updated directly. "
+                        f"Allowed fields: {', '.join(sorted(ALLOWED_UPDATE_FIELDS))}"
+                    )
                 if not hasattr(session, field):
                     logger.error(f"Invalid field update attempted: {field}")
                     raise ValueError(f"Invalid session field: {field}")

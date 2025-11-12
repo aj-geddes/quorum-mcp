@@ -11,6 +11,7 @@ The server uses stdio transport for integration with Claude Desktop and other MC
 import asyncio
 import logging
 import os
+from enum import Enum
 from typing import Any
 
 from mcp.server.fastmcp import FastMCP
@@ -27,6 +28,18 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
+
+# Valid consensus modes
+class ConsensusMode(str, Enum):
+    """Valid operational modes for quorum consensus."""
+    QUICK_CONSENSUS = "quick_consensus"
+    FULL_DELIBERATION = "full_deliberation"
+    DEVILS_ADVOCATE = "devils_advocate"
+
+
+# Input validation limits
+MAX_QUERY_LENGTH = 50000  # Maximum length for query text
+MAX_CONTEXT_LENGTH = 100000  # Maximum length for context text
 
 # Global instances (initialized in main)
 _session_manager: SessionManager | None = None
@@ -72,10 +85,48 @@ async def q_in(
 
     logger.info(f"q_in called with query: {query[:100]}... (mode: {mode})")
 
+    # Validate server initialization
     if _orchestrator is None or _session_manager is None:
         return {
             "error": "Server not initialized. Please check API keys are configured.",
             "status": "error",
+        }
+
+    # Validate inputs
+    try:
+        # Validate query
+        if not query or not query.strip():
+            return {
+                "error": "Query cannot be empty or whitespace only",
+                "status": "invalid_request",
+            }
+
+        if len(query) > MAX_QUERY_LENGTH:
+            return {
+                "error": f"Query exceeds maximum length of {MAX_QUERY_LENGTH} characters",
+                "status": "invalid_request",
+            }
+
+        # Validate context if provided
+        if context and len(context) > MAX_CONTEXT_LENGTH:
+            return {
+                "error": f"Context exceeds maximum length of {MAX_CONTEXT_LENGTH} characters",
+                "status": "invalid_request",
+            }
+
+        # Validate mode
+        valid_modes = {m.value for m in ConsensusMode}
+        if mode not in valid_modes:
+            return {
+                "error": f"Invalid mode '{mode}'. Valid modes: {', '.join(valid_modes)}",
+                "status": "invalid_request",
+            }
+
+    except Exception as e:
+        logger.error(f"Input validation error: {e}")
+        return {
+            "error": f"Input validation failed: {str(e)}",
+            "status": "invalid_request",
         }
 
     try:
