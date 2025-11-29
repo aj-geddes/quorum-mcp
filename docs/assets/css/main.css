@@ -871,6 +871,25 @@ strong {
   border-bottom-color: var(--color-primary);
 }
 
+/* Code Panels */
+.code-panels {
+  margin-top: 0;
+}
+
+.code-panel {
+  display: none;
+}
+
+.code-panel.active {
+  display: block;
+}
+
+.code-panel pre {
+  margin: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
 /* ============================================
    Footer
    ============================================ */

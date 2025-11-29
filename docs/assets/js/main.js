@@ -237,6 +237,41 @@
   }
 
   // ============================================
+  // Code Tabs
+  // ============================================
+  function initCodeTabs() {
+    const tabContainers = document.querySelectorAll('.code-tabs');
+
+    tabContainers.forEach(container => {
+      const tabs = container.querySelectorAll('.code-tab');
+      const panelContainer = container.nextElementSibling;
+
+      if (!panelContainer || !panelContainer.classList.contains('code-panels')) return;
+
+      const panels = panelContainer.querySelectorAll('.code-panel');
+
+      tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          const targetPanel = tab.dataset.tab;
+
+          // Update active tab
+          tabs.forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+
+          // Update active panel
+          panels.forEach(panel => {
+            if (panel.dataset.panel === targetPanel) {
+              panel.classList.add('active');
+            } else {
+              panel.classList.remove('active');
+            }
+          });
+        });
+      });
+    });
+  }
+
+  // ============================================
   // Initialize All Features
   // ============================================
   function init() {
@@ -246,6 +281,7 @@
     initSmoothScroll();
     initCodeCopy();
     initExternalLinks();
+    initCodeTabs();
   }
 
   // Run on DOM ready

@@ -191,19 +191,45 @@ description: Multi-AI Consensus System - Orchestrate multiple AI providers throu
     </header>
 
     <div class="code-tabs">
-      <button class="code-tab active">MCP Tool</button>
-      <button class="code-tab">Python</button>
-      <button class="code-tab">Claude Desktop</button>
+      <button class="code-tab active" data-tab="mcp">MCP Tool</button>
+      <button class="code-tab" data-tab="python">Python</button>
+      <button class="code-tab" data-tab="claude">Claude Desktop</button>
     </div>
 
-```json
-{
-  "query": "What are the top 3 considerations for API design?",
-  "context": "Building a REST API for a SaaS product",
-  "mode": "quick_consensus"
-}
-```
+    <div class="code-panels">
+      <div class="code-panel active" data-panel="mcp">
+        <pre><code class="language-json">{
+  "tool": "q_in",
+  "arguments": {
+    "query": "What are the top 3 considerations for API design?",
+    "context": "Building a REST API for a SaaS product",
+    "mode": "quick_consensus"
+  }
+}</code></pre>
+      </div>
 
+      <div class="code-panel" data-panel="python">
+        <pre><code class="language-python">from quorum_mcp import Orchestrator
+
+orchestrator = Orchestrator()
+result = await orchestrator.run_consensus(
+    query="What are the top 3 considerations for API design?",
+    context="Building a REST API for a SaaS product",
+    mode="quick_consensus"
+)
+print(result.synthesis)</code></pre>
+      </div>
+
+      <div class="code-panel" data-panel="claude">
+        <pre><code class="language-text">In Claude Desktop, simply ask:
+
+"Use the quorum tool to get consensus on:
+What are the top 3 considerations for API design?
+Context: Building a REST API for a SaaS product"
+
+Claude will call q_in and return the consensus.</code></pre>
+      </div>
+    </div>
   </div>
 </section>
 
