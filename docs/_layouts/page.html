@@ -1,0 +1,70 @@
+---
+layout: default
+---
+<div class="page-wrapper">
+  <aside class="sidebar" aria-label="Documentation navigation">
+    <nav class="sidebar-nav">
+      <div class="sidebar-section">
+        <h3>Getting Started</h3>
+        <ul>
+          <li><a href="{{ '/getting-started/' | relative_url }}"{% if page.url == '/getting-started/' %} class="active"{% endif %}>Quick Start</a></li>
+          <li><a href="{{ '/getting-started/#installation' | relative_url }}">Installation</a></li>
+          <li><a href="{{ '/getting-started/#configuration' | relative_url }}">Configuration</a></li>
+        </ul>
+      </div>
+
+      <div class="sidebar-section">
+        <h3>Providers</h3>
+        <ul>
+          <li><a href="{{ '/providers/' | relative_url }}"{% if page.url == '/providers/' %} class="active"{% endif %}>Overview</a></li>
+          <li><a href="{{ '/providers/anthropic/' | relative_url }}"{% if page.url contains '/providers/anthropic' %} class="active"{% endif %}>Anthropic Claude</a></li>
+          <li><a href="{{ '/providers/openai/' | relative_url }}"{% if page.url contains '/providers/openai' %} class="active"{% endif %}>OpenAI</a></li>
+          <li><a href="{{ '/providers/gemini/' | relative_url }}"{% if page.url contains '/providers/gemini' %} class="active"{% endif %}>Google Gemini</a></li>
+          <li><a href="{{ '/providers/cohere/' | relative_url }}"{% if page.url contains '/providers/cohere' %} class="active"{% endif %}>Cohere</a></li>
+          <li><a href="{{ '/providers/mistral/' | relative_url }}"{% if page.url contains '/providers/mistral' %} class="active"{% endif %}>Mistral AI</a></li>
+          <li><a href="{{ '/providers/novita/' | relative_url }}"{% if page.url contains '/providers/novita' %} class="active"{% endif %}>Novita AI</a></li>
+          <li><a href="{{ '/providers/ollama/' | relative_url }}"{% if page.url contains '/providers/ollama' %} class="active"{% endif %}>Ollama (Local)</a></li>
+        </ul>
+      </div>
+
+      <div class="sidebar-section">
+        <h3>Reference</h3>
+        <ul>
+          <li><a href="{{ '/api/' | relative_url }}"{% if page.url == '/api/' %} class="active"{% endif %}>API Reference</a></li>
+          <li><a href="{{ '/architecture/' | relative_url }}"{% if page.url == '/architecture/' %} class="active"{% endif %}>Architecture</a></li>
+          <li><a href="{{ '/configuration/' | relative_url }}"{% if page.url == '/configuration/' %} class="active"{% endif %}>Configuration</a></li>
+        </ul>
+      </div>
+
+      <div class="sidebar-section">
+        <h3>Resources</h3>
+        <ul>
+          <li><a href="{{ '/examples/' | relative_url }}"{% if page.url == '/examples/' %} class="active"{% endif %}>Examples</a></li>
+          <li><a href="{{ '/contributing/' | relative_url }}"{% if page.url == '/contributing/' %} class="active"{% endif %}>Contributing</a></li>
+        </ul>
+      </div>
+    </nav>
+  </aside>
+
+  <article class="page-content">
+    {% if page.title %}
+    <header class="page-header">
+      <h1>{{ page.title }}</h1>
+      {% if page.description %}
+      <p class="page-description">{{ page.description }}</p>
+      {% endif %}
+    </header>
+    {% endif %}
+
+    <div class="content">
+      {{ content }}
+    </div>
+
+    {% if page.toc != false %}
+    <nav class="table-of-contents" aria-label="Table of contents">
+      <h4>On this page</h4>
+      <div id="toc"></div>
+    </nav>
+    {% endif %}
+  </article>
+</div>

@@ -1,0 +1,126 @@
+# Quorum-MCP Documentation Site
+# Jekyll Configuration
+
+# Site Settings
+title: Quorum-MCP
+description: Multi-AI Consensus System - Orchestrate multiple AI providers through deliberation to produce consensus-based responses
+url: "https://aj-geddes.github.io"
+baseurl: "/quorum-mcp"
+logo: /assets/images/logo.svg
+
+# Author/Organization
+author:
+  name: Quorum-MCP Contributors
+  github: aj-geddes
+
+# Repository
+repository: aj-geddes/quorum-mcp
+github_username: aj-geddes
+
+# SEO & Social
+twitter:
+  card: summary_large_image
+social:
+  name: Quorum-MCP
+  links:
+    - https://github.com/aj-geddes/quorum-mcp
+
+# Build Settings
+markdown: kramdown
+highlighter: rouge
+permalink: pretty
+timezone: UTC
+
+# Plugins (GitHub Pages compatible)
+plugins:
+  - jekyll-seo-tag
+  - jekyll-sitemap
+  - jekyll-feed
+  - jekyll-relative-links
+  - jekyll-github-metadata
+
+# Exclude from build
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor
+  - README.md
+  - .gitignore
+  - "*.sh"
+
+# Include dotfiles
+include:
+  - _pages
+
+# Performance
+sass:
+  style: compressed
+  sass_dir: _sass
+
+# Kramdown settings
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+  syntax_highlighter_opts:
+    block:
+      line_numbers: false
+
+# Collections for documentation sections
+collections:
+  providers:
+    output: true
+    permalink: /providers/:name/
+
+# Default front matter
+defaults:
+  - scope:
+      path: ""
+      type: "pages"
+    values:
+      layout: "page"
+  - scope:
+      path: ""
+      type: "providers"
+    values:
+      layout: "provider"
+  - scope:
+      path: "guides"
+    values:
+      layout: "page"
+
+# Navigation structure
+navigation:
+  - title: Home
+    url: /
+  - title: Getting Started
+    url: /getting-started/
+  - title: Providers
+    url: /providers/
+    children:
+      - title: Overview
+        url: /providers/
+      - title: Anthropic Claude
+        url: /providers/anthropic/
+      - title: OpenAI
+        url: /providers/openai/
+      - title: Google Gemini
+        url: /providers/gemini/
+      - title: Cohere
+        url: /providers/cohere/
+      - title: Mistral AI
+        url: /providers/mistral/
+      - title: Novita AI
+        url: /providers/novita/
+      - title: Ollama (Local)
+        url: /providers/ollama/
+  - title: API Reference
+    url: /api/
+  - title: Architecture
+    url: /architecture/
+  - title: Configuration
+    url: /configuration/
+  - title: Examples
+    url: /examples/
+  - title: Contributing
+    url: /contributing/

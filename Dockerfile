@@ -35,6 +35,7 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copy application code
 COPY src/ ./src/
+COPY static/ ./static/
 COPY pyproject.toml README.md ./
 
 # Create non-root user
@@ -51,4 +52,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/api/health || exit 1
 
 # Run the web application
-CMD ["python", "-m", "uvicorn", "quorum_mcp.web.app:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["python", "-m", "uvicorn", "quorum_mcp.web_server:app", "--host", "0.0.0.0", "--port", "8000"]
